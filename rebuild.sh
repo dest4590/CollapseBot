@@ -1,4 +1,4 @@
 docker build --tag=collapsebob/sigma .
 docker kill collapsebob
 docker rm collapsebob
-docker run collapsebob/sigma --name collapsebob
+docker run -d --name collapsebob collapsebob/sigma
