@@ -1,0 +1,20 @@
+nursultan:
+  - нурик
+  - нурсултан
+
+download:
+  trigger:
+    - как скачать
+    - how to download
+  response:
+    качать тут https://collapseloader.org
+    
+crash:
+  trigger:
+    - crash
+    - крашит
+    - вылетает
+    - не запускается
+
+  response:
+      создай тикет в <#1231330786481930347>
