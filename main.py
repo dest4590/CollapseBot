@@ -17,7 +17,9 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = discord.Bot(intents=intents)
+activity = discord.Activity(type=discord.ActivityType.watching, name="/popularity")
+
+bot = discord.Bot(intents=intents, activity=activity, status=discord.Status.idle)
 start_time = time.time()
 
 def bold(msg: str) -> str:
