@@ -1,16 +1,16 @@
 import os
+import time
 
 import discord
 import requests
 import yaml
 from dotenv import load_dotenv
+from loguru import logger
 from uptime_kuma_api import UptimeKumaApi
 
 from collapsepopularity.parsers.cheaterfun import CheaterFun
 from collapsepopularity.parsers.ezyhack import Ezyhack
 from collapsepopularity.parsers.xenforo import Xenforo
-import time
-from loguru import logger
 
 load_dotenv()
 
@@ -20,18 +20,15 @@ intents.message_content = True
 bot = discord.Bot(intents=intents)
 start_time = time.time()
 
-
 def bold(msg: str) -> str:
     return f"**{msg}**"
-
 
 def check_word_list(word_list: list, message: discord.Message) -> bool:
     return any(x in message.content for x in word_list)
 
-
 with open("wordlist.yml", "r", encoding="utf-8") as file:
-    word_list: dict = yaml.safe_load(file)
     raw_word_list = file.read()
+    word_list: dict = yaml.safe_load(raw_word_list)
     logger.debug(f"Word list loaded: {word_list}")
     
 use_word_list = True
@@ -67,16 +64,19 @@ async def on_message(message: discord.Message):
             ):
                 await message.reply("не тегай плс", mention_author=True)
 
-        logger.debug(f'Triggered message from {message.author.id} in {message.channel.id} with content: {message.content}')
+        logger.debug(f'User triggered message from {message.author.id} in {message.channel.id} with content: {message.content}')
 
 @bot.slash_command(name="popularity", description="Check popularity of CollapseLoader")
 async def popularity(ctx: discord.ApplicationContext):
     yougame = Xenforo("https://yougame.biz/forums/64/", 319219).parse()
     logger.debug(f"parsed yougame: {yougame}")
+    
     blasthk = Xenforo("https://www.blast.hk/forums/177/", 211204).parse()
     logger.debug(f"parsed blasthk: {blasthk}")
+    
     ezyhack = Ezyhack().parse(os.getenv("PROXY"))
     logger.debug(f"parsed ezyhack: {ezyhack}")
+    
     cheaterfun = CheaterFun().parse(os.getenv("PROXY"))
     logger.debug(f"parsed cheaterfun: {cheaterfun}")
 
@@ -88,7 +88,6 @@ Yougame: {bold(yougame)}
 Ezyhack: {bold(ezyhack)}
 Cheater.fun: {bold(cheaterfun)}
 Blasthk: {bold(blasthk)}""")
-
 
 @bot.slash_command(name="ping", description="Check ping of CollapseLoader servers")
 async def ping(ctx: discord.ApplicationContext):
