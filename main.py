@@ -31,6 +31,7 @@ def check_word_list(word_list: list, message: discord.Message) -> bool:
 
 with open("wordlist.yml", "r", encoding="utf-8") as file:
     word_list: dict = yaml.safe_load(file)
+    raw_word_list = file.read()
     logger.debug(f"Word list loaded: {word_list}")
     
 use_word_list = True
@@ -155,5 +156,9 @@ async def restart(ctx: discord.ApplicationContext):
         os.system("bash rebuild.sh")
     else: 
         await ctx.respond("вали отсюда")
+
+@bot.slash_command(name="wordlist", description="Get word list")
+async def wordlist(ctx: discord.ApplicationContext):
+    await ctx.respond(f"Word list: ```yaml\n{raw_word_list}```")
 
 bot.run(os.getenv("TOKEN"))
