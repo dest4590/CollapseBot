@@ -28,6 +28,13 @@ def bold(msg: str) -> str:
 def check_word_list(word_list: list, message: discord.Message) -> bool:
     return any(x in message.content for x in word_list)
 
+is_admin = lambda id: id == 556864778576986144
+
+async def discord_log(log: str, message: discord.Message):
+    channel = bot.get_channel(1277572439236153344)
+    logger.debug(f"Logging to discord: {log}")
+    await channel.send(f'{log}, author: <@{message.author.id}>, [message link](https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id})')
+
 with open("wordlist.yml", "r", encoding="utf-8") as file:
     raw_word_list = file.read()
     word_list: dict = yaml.safe_load(raw_word_list)
@@ -43,33 +50,26 @@ async def on_ready():
 async def on_message(message: discord.Message):
     if message.author.id != bot.user.id and use_word_list:
         if check_word_list(word_list["nursultan"], message):
-            channel = bot.get_channel(1231330786481930340)
-            await channel.send(f"Nursultan TRIGGER ALARM 🚨, author: <@{message.author.id}>, message: [message link](https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id})")
+            await discord_log(f"Nursultan trigger", message)
             await message.reply("кряк нурика ратка", mention_author=False)
 
         if check_word_list(word_list["download"]["trigger"], message):
             await message.reply(word_list["download"]["response"], mention_author=True)
+            await discord_log(f"Download trigger", message)
 
         if check_word_list(word_list["crash"]["trigger"], message):
             await message.reply(word_list["crash"]["response"], mention_author=True)
+            await discord_log(f"Crash trigger", message)
 
         if check_word_list(["<@556864778576986144>"], message):
-            if not any(
-                x.id
-                in [
-                    1245792247916793877,
-                    1240356360604881027,
-                    1233159828176769146,
-                    1231334945041944628,
-                ]
-                for x in message.author.roles
-            ):
-                await message.reply("не тегай плс", mention_author=True)
-
-        logger.debug(f'User triggered message from {message.author.id} in {message.channel.id} with content: {message.content}')
+            if not any(x.id in [1245792247916793877, 1240356360604881027, 1233159828176769146, 1231334945041944628] for x in message.author.roles):
+                await message.reply("не тегай админов плс", mention_author=True)
+                await discord_log(f"Admin tag", message)
 
 @bot.slash_command(name="popularity", description="Check popularity of CollapseLoader")
 async def popularity(ctx: discord.ApplicationContext):
+    logger.debug(f"popularity command executed")
+    
     yougame = Xenforo("https://yougame.biz/forums/64/", 319219).parse()
     logger.debug(f"parsed yougame: {yougame}")
     
@@ -93,6 +93,8 @@ Blasthk: {bold(blasthk)}""")
 
 @bot.slash_command(name="ping", description="Check ping of CollapseLoader servers")
 async def ping(ctx: discord.ApplicationContext):
+    logger.debug(f"ping command executed")
+    
     with UptimeKumaApi('https://status.collapseloader.org') as api:
         pings = ''
 
@@ -105,6 +107,8 @@ async def ping(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="clients", description="Get list of clients")
 async def clients(ctx: discord.ApplicationContext):
+    logger.debug(f"clients command executed")
+    
     clients = requests.get("https://web.collapseloader.org/api/clients").json()
 
     embed = discord.Embed(color=discord.Colour.dark_purple())
@@ -123,10 +127,9 @@ async def clients(ctx: discord.ApplicationContext):
 
     await ctx.respond("Our clients:", embed=embed)
 
-
 @bot.slash_command(name="use_word_list", description="Toggle word list")
 async def use_word_list(ctx: discord.ApplicationContext):
-    if ctx.author.id == 556864778576986144:
+    if is_admin:
         global use_word_list
         use_word_list = not use_word_list
 
@@ -136,6 +139,8 @@ async def use_word_list(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="uptime", description="Get uptime of CollapseBot")
 async def uptime(ctx: discord.ApplicationContext):
+    logger.debug(f"uptime command executed")
+    
     uptime_seconds = int(time.time() - start_time)
     uptime_minutes = uptime_seconds // 60
     uptime_hours = uptime_minutes // 60
@@ -151,7 +156,9 @@ async def uptime(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="update", description="Restart CollapseBot")
 async def restart(ctx: discord.ApplicationContext):
-    if ctx.author.id == 556864778576986144:
+    logger.debug(f"update command executed")
+    
+    if is_admin:
         await ctx.respond("Updating...")
         os.system("git pull")
         os.system("bash rebuild.sh")
@@ -160,6 +167,8 @@ async def restart(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="wordlist", description="Get word list")
 async def wordlist(ctx: discord.ApplicationContext):
+    logger.debug(f"wordlist command executed")
+    
     await ctx.respond(f"Word list: ```yaml\n{raw_word_list}```")
 
 bot.run(os.getenv("TOKEN"))
