@@ -48,7 +48,7 @@ async def on_ready():
 
 @bot.event
 async def on_message(message: discord.Message):
-    if message.author.id != bot.user.id and use_word_list:
+    if message.author.id != bot.user.id and use_word_list and message.channel.category_id != 1231330787396161783:
         if check_word_list(word_list["nursultan"], message):
             await discord_log(f"Nursultan trigger", message)
             await message.reply("кряк нурика ратка", mention_author=False)
