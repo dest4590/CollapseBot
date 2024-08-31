@@ -6,6 +6,7 @@ import requests
 import yaml
 from dotenv import load_dotenv
 from loguru import logger
+from minio import Minio
 from uptime_kuma_api import UptimeKumaApi
 
 from collapsepopularity.parsers.cheaterfun import CheaterFun
@@ -21,6 +22,8 @@ activity = discord.Activity(type=discord.ActivityType.watching, name="/popularit
 
 bot = discord.Bot(intents=intents, activity=activity, status=discord.Status.idle)
 start_time = time.time()
+
+client = Minio("minio.collapseloader.org", os.getenv("S3-ACCESS-KEY"), os.getenv("S3-SECRET-KEY"))
 
 def bold(msg: str) -> str:
     return f"**{msg}**"
@@ -111,7 +114,7 @@ async def clients(ctx: discord.ApplicationContext):
     
     clients = requests.get("https://web.collapseloader.org/api/clients").json()
 
-    embed = discord.Embed(color=discord.Colour.dark_purple())
+    embed = discord.Embed(color=discord.Colour.dark_grey())
 
     embed.add_field(
         name="Clients list",
@@ -127,8 +130,58 @@ async def clients(ctx: discord.ApplicationContext):
 
     await ctx.respond("Our clients:", embed=embed)
 
+def get_bucket_size(bucket: str) -> int:
+    total_size = 0
+
+    objects = client.list_objects(bucket, recursive=True)
+    for obj in objects:
+        total_size += obj.size
+
+    return f"{total_size / 1024 / 1024:.2f}"
+
+@bot.slash_command(name="size", description="Get size of CollapseLoader storage")
+async def size(ctx: discord.ApplicationContext):
+    logger.debug(f"size command executed")
+
+    await ctx.respond(f"Total size of CollapseLoader: **{get_bucket_size('collapse')}** MB")
+
+@bot.slash_command(name="stats", description="Get CollapseLoader stats")
+async def stats(ctx: discord.ApplicationContext):
+    logger.debug(f"stats command executed")
+
+    embed = discord.Embed(color=discord.Color.dark_grey())
+
+    embed.add_field(name="Server Count", value=f"Total Servers: {len(bot.guilds)}")
+    embed.add_field(name="User Count", value=f"Total Users: {sum(guild.member_count for guild in bot.guilds)}")
+    embed.add_field(name="Uptime", value=f"Bot Uptime: {get_uptime_string()}")
+    embed.add_field(name="Word List", value=f"Word List Enabled: {use_word_list}")
+    embed.add_field(name="Bucket Size", value=f"Total Size: {get_bucket_size('collapse')} MB")
+    embed.add_field(name="Discord ping", value=f"{bot.latency * 1000:.2f}ms")
+    embed.set_thumbnail(url=bot.user.avatar.url)
+
+    await ctx.respond(embed=embed)
+
+@bot.slash_command(name="files", description="Get list of files in CollapseLoader storage")
+async def files(ctx: discord.ApplicationContext):
+    logger.debug(f"files command executed")
+
+    objects = client.list_objects("collapse", recursive=True)
+
+    embed = discord.Embed(color=discord.Color.dark_grey())
+    embed.add_field(
+        name="Files list",
+        value="\n".join(
+            [
+                f"{obj.object_name} - {obj.size / 1024 / 1024:.2f} MB"
+                for obj in objects
+            ]
+        ),
+    )
+
+    await ctx.respond("Our files:", embed=embed)
+
 @bot.slash_command(name="use_word_list", description="Toggle word list")
-async def use_word_list(ctx: discord.ApplicationContext):
+async def cmd_use_word_list(ctx: discord.ApplicationContext):
     if is_admin:
         global use_word_list
         use_word_list = not use_word_list
@@ -137,22 +190,29 @@ async def use_word_list(ctx: discord.ApplicationContext):
     else:
         await ctx.respond("вали отсюда")
 
-@bot.slash_command(name="uptime", description="Get uptime of CollapseBot")
-async def uptime(ctx: discord.ApplicationContext):
-    logger.debug(f"uptime command executed")
+def get_uptime_string():
+    """Get uptime string"""
     
     uptime_seconds = int(time.time() - start_time)
     uptime_minutes = uptime_seconds // 60
     uptime_hours = uptime_minutes // 60
 
     uptime_string = ""
+    
     if uptime_hours > 0:
         uptime_string += f"{uptime_hours} hours, "
     if uptime_minutes > 0:
         uptime_string += f"{uptime_minutes % 60} minutes, "
+        
     uptime_string += f"{uptime_seconds % 60} seconds"
 
-    await ctx.respond(f"Bot running for {uptime_string}")
+    return uptime_string
+
+@bot.slash_command(name="uptime", description="Get uptime of CollapseBot")
+async def uptime(ctx: discord.ApplicationContext):
+    logger.debug(f"uptime command executed")
+    
+    await ctx.respond(f"Bot running for {get_uptime_string()}")
 
 @bot.slash_command(name="update", description="Restart CollapseBot")
 async def restart(ctx: discord.ApplicationContext):
