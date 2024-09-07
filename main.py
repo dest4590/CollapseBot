@@ -25,8 +25,7 @@ start_time = time.time()
 
 client = Minio("minio.collapseloader.org", os.getenv("S3-ACCESS-KEY"), os.getenv("S3-SECRET-KEY"))
 
-def bold(msg: str) -> str:
-    return f"**{msg}**"
+bold = lambda msg: f"**{msg}**"
 
 def check_word_list(word_list: list, message: discord.Message) -> bool:
     return any(x in message.content for x in word_list)
@@ -52,7 +51,7 @@ async def on_ready():
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.id != bot.user.id and use_word_list and message.channel.category_id != 1231330787396161783:
-        if check_word_list(word_list["nursultan"], message):
+        if check_word_list(word_list["nursultan"]["trigger"], message):
             await discord_log(f"Nursultan trigger", message)
             await message.reply("кряк нурика ратка", mention_author=False)
 
@@ -149,6 +148,10 @@ async def size(ctx: discord.ApplicationContext):
 async def stats(ctx: discord.ApplicationContext):
     logger.debug(f"stats command executed")
 
+    analytics = requests.get('https://web.collapseloader.org/api/counter').json()
+
+    endpoint_counts = {entry['endpoint']: entry['count'] for entry in analytics}
+
     embed = discord.Embed(color=discord.Color.dark_grey())
 
     embed.add_field(name="Server Count", value=f"Total Servers: {len(bot.guilds)}")
@@ -157,6 +160,8 @@ async def stats(ctx: discord.ApplicationContext):
     embed.add_field(name="Word List", value=f"Word List Enabled: {use_word_list}")
     embed.add_field(name="Bucket Size", value=f"Total Size: {get_bucket_size('collapse')} MB")
     embed.add_field(name="Discord ping", value=f"{bot.latency * 1000:.2f}ms")
+    embed.add_field(name="Loader start", value=f"{endpoint_counts.get('api/analytics/start', '?')} times")
+    embed.add_field(name="Client start", value=f"{endpoint_counts.get('api/analytics/client', '?')} times")
     embed.set_thumbnail(url=bot.user.avatar.url)
 
     await ctx.respond(embed=embed)

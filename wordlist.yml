@@ -1,7 +1,8 @@
 nursultan:
-  - нурик
-  - нурсултан
-
+  trigger:
+    - нурик
+    - нурсултан
+    
 download:
   trigger:
     - как скачать
