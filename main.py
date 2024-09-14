@@ -187,7 +187,7 @@ async def files(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="use_word_list", description="Toggle word list")
 async def cmd_use_word_list(ctx: discord.ApplicationContext):
-    if is_admin:
+    if is_admin(ctx.author.id):
         global use_word_list
         use_word_list = not use_word_list
 
@@ -223,7 +223,7 @@ async def uptime(ctx: discord.ApplicationContext):
 async def restart(ctx: discord.ApplicationContext):
     logger.debug(f"update command executed")
     
-    if is_admin:
+    if is_admin(ctx.author.id):
         await ctx.respond("Updating...")
         os.system("git pull")
         os.system("bash rebuild.sh")
