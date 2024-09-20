@@ -18,7 +18,7 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 
-activity = discord.Activity(type=discord.ActivityType.watching, name="/popularity")
+activity = discord.Activity(type=discord.ActivityType.watching, name="/stats")
 
 bot = discord.Bot(intents=intents, activity=activity, status=discord.Status.idle)
 start_time = time.time()
@@ -103,7 +103,7 @@ async def ping(ctx: discord.ApplicationContext):
         api.login_by_token(os.getenv('UPTIME-KUMA-TOKEN'))
 
         for m in api.get_monitors():
-            pings += f'\n{m['name']}: **{str(api.get_monitor_beats(int(m['id']), 1)[-1]['ping']) + 'ms'}**'
+            pings += f'\n{m["name"]}: **{str(api.get_monitor_beats(int(m["id"]), 1)[-1]["ping"]) + "ms"}**'
 
         await ctx.respond(f"CollapseLoader servers ping\n{pings}")
 
@@ -163,7 +163,7 @@ async def stats(ctx: discord.ApplicationContext):
     embed.add_field(name="Loader start", value=f"{endpoint_counts.get('api/analytics/start', '?')} times")
     embed.add_field(name="Client start", value=f"{endpoint_counts.get('api/analytics/client', '?')} times")
     embed.set_thumbnail(url=bot.user.avatar.url)
-
+    
     await ctx.respond(embed=embed)
 
 @bot.slash_command(name="files", description="Get list of files in CollapseLoader storage")
