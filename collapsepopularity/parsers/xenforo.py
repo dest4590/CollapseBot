@@ -8,12 +8,17 @@ class Xenforo:
         self.thread_id = thread_id
 
     def parse(self) -> str:
+        attempts = 0
         while True:
+            if attempts >= 3:
+                return 'Failed to parse'
+            
             try:
                 response = requests.get(self.url, timeout=2)
                 response.raise_for_status()
                 bs = BeautifulSoup(response.content, 'lxml')
             except requests.exceptions.RequestException:
+                attempts += 1
                 continue
 
             if bs:

@@ -6,7 +6,11 @@ class CheaterFun:
     url = 'https://cheater.fun/cheat-loaders/8966-collapseloader-minecraft-cheat-loader.html'
 
     def parse(self, proxy: str) -> str:
+        attempts = 0
         while True:
+            if attempts >= 3:
+                return 'Failed to parse'
+            
             try:
                 response = requests.get(
                     self.url,
@@ -17,6 +21,7 @@ class CheaterFun:
 
                 bs = BeautifulSoup(response.content, 'lxml')
             except requests.exceptions.RequestException:
+                attempts += 1
                 continue
 
             if bs:
