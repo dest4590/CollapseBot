@@ -40,7 +40,7 @@ async def discord_log(log: str, message: discord.Message):
 with open("wordlist.yml", "r", encoding="utf-8") as file:
     raw_word_list = file.read()
     word_list: dict = yaml.safe_load(raw_word_list)
-    logger.debug(f"Word list loaded: {word_list}")
+    logger.debug(f"Word list loaded")
     
 use_word_list = True
 
@@ -71,6 +71,8 @@ async def on_message(message: discord.Message):
 @bot.slash_command(name="popularity", description="Check popularity of CollapseLoader")
 async def popularity(ctx: discord.ApplicationContext):
     logger.debug(f"popularity command executed")
+    
+    await ctx.defer()
     
     yougame = Xenforo("https://yougame.biz/forums/64/", 319219).parse()
     logger.debug(f"parsed yougame: {yougame}")
@@ -164,6 +166,16 @@ async def stats(ctx: discord.ApplicationContext):
     embed.add_field(name="Client start", value=f"{endpoint_counts.get('api/analytics/client', '?')} times")
     embed.set_thumbnail(url=bot.user.avatar.url)
     
+    await ctx.respond(embed=embed)
+
+@bot.slash_command(name="socials", description="Get CollapseLoader socials")
+async def socials(ctx: discord.ApplicationContext):
+    logger.debug(f"socials command executed")
+    
+    embed = discord.Embed(color=discord.Color.brand_green())
+    embed.add_field(name="Socials", value="\n[Telegram](https://t.me/collapseloader)\n[Discord](https://discord.com/invite/FyKtnFqs6J)")
+    embed.set_thumbnail(url=bot.user.avatar.url)
+
     await ctx.respond(embed=embed)
 
 @bot.slash_command(name="files", description="Get list of files in CollapseLoader storage")
