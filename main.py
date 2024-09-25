@@ -27,6 +27,27 @@ client = Minio("minio.collapseloader.org", os.getenv("S3-ACCESS-KEY"), os.getenv
 
 bold = lambda msg: f"**{msg}**"
 
+user_cooldowns = {}
+cooldown_messages = {}
+trigger_counts = {}
+COOLDOWN_DURATION = 30
+
+def check_cooldown(user_id: int) -> bool:
+    current_time = time.time()
+    if user_id in user_cooldowns and current_time - user_cooldowns[user_id] < COOLDOWN_DURATION:
+        if user_id not in trigger_counts:
+            trigger_counts[user_id] = 1
+        else:
+            trigger_counts[user_id] += 1
+        if trigger_counts[user_id] >= 3:
+            return True
+    else:
+        user_cooldowns[user_id] = current_time
+        trigger_counts[user_id] = 1
+        if user_id in cooldown_messages:
+            del cooldown_messages[user_id]
+    return False
+
 def check_word_list(keywords: list, message: discord.Message) -> bool:
     return any(x in message.content for x in keywords)
 
@@ -43,7 +64,7 @@ with open(word_list_filename, "r", encoding="utf-8") as file:
     raw_word_list = file.read()
     word_list: dict = yaml.safe_load(raw_word_list)
     logger.info(f'Loaded {len(word_list.keys())} words: {", ".join(word_list.keys())}')
-    
+
 def use_word(keyword: str) -> bool:
     try:
         return word_list[keyword]["enabled"]
@@ -56,20 +77,35 @@ use_word_list = True
 async def on_ready():
     logger.info(f"bluetooth device is ready to pair")
 
+async def send_cooldown_message(message: discord.Message):
+    global cooldown_messages
+    if message.author.id not in cooldown_messages:
+        cooldown_message = await message.channel.send(f"<@{message.author.id}>, you are on cooldown for {COOLDOWN_DURATION} seconds.", delete_after=5)
+        cooldown_messages[message.author.id] = cooldown_message  
+
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.id != bot.user.id and use_word_list and message.channel.category_id != 1231330787396161783:
         if check_word_list(word_list["nursultan"]["trigger"], message) and use_word("nursultan"):
-            await message.reply(word_list["nursultan"]["response"], mention_author=False)
-            await discord_log(f"Nursultan trigger", message)
+            if not check_cooldown(message.author.id):
+                await message.reply(word_list["nursultan"]["response"], mention_author=False)
+                await discord_log(f"Nursultan trigger", message)
+            else:
+                await send_cooldown_message(message)
 
         if check_word_list(word_list["download"]["trigger"], message) and use_word("download"):
-            await message.reply(word_list["download"]["response"], mention_author=True)
-            await discord_log(f"Download trigger", message)
+            if not check_cooldown(message.author.id):
+                await message.reply(word_list["download"]["response"], mention_author=True)
+                await discord_log(f"Download trigger", message)
+            else:
+                await send_cooldown_message(message)
 
         if check_word_list(word_list["crash"]["trigger"], message) and use_word("crash"):
-            await message.reply(word_list["crash"]["response"], mention_author=True)
-            await discord_log(f"Crash trigger", message)
+            if not check_cooldown(message.author.id):
+                await message.reply(word_list["crash"]["response"], mention_author=True)
+                await discord_log(f"Crash trigger", message)
+            else:
+                await send_cooldown_message(message)
 
         if check_word_list(["<@556864778576986144>"], message):
             if not any(x.id in [1245792247916793877, 1240356360604881027, 1233159828176769146, 1231334945041944628] for x in message.author.roles):
