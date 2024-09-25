@@ -27,8 +27,8 @@ client = Minio("minio.collapseloader.org", os.getenv("S3-ACCESS-KEY"), os.getenv
 
 bold = lambda msg: f"**{msg}**"
 
-def check_word_list(word_list: list, message: discord.Message) -> bool:
-    return any(x in message.content for x in word_list)
+def check_word_list(keywords: list, message: discord.Message) -> bool:
+    return any(x in message.content for x in keywords)
 
 is_admin = lambda id: id == 556864778576986144
 
@@ -37,11 +37,19 @@ async def discord_log(log: str, message: discord.Message):
     logger.debug(f"Logging to discord: {log}")
     await channel.send(f'{log}, author: <@{message.author.id}>, [message link](https://discord.com/channels/{message.guild.id}/{message.channel.id}/{message.id})')
 
-with open("wordlist.yml", "r", encoding="utf-8") as file:
+word_list_filename = "wordlist.yml"
+
+with open(word_list_filename, "r", encoding="utf-8") as file:
     raw_word_list = file.read()
     word_list: dict = yaml.safe_load(raw_word_list)
-    logger.debug(f"Word list loaded")
+    logger.info(f'Loaded {len(word_list.keys())} words: {", ".join(word_list.keys())}')
     
+def use_word(keyword: str) -> bool:
+    try:
+        return word_list[keyword]["enabled"]
+    except KeyError:
+        return True
+
 use_word_list = True
 
 @bot.event
@@ -51,15 +59,15 @@ async def on_ready():
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.id != bot.user.id and use_word_list and message.channel.category_id != 1231330787396161783:
-        if check_word_list(word_list["nursultan"]["trigger"], message):
+        if check_word_list(word_list["nursultan"]["trigger"], message) and use_word("nursultan"):
+            await message.reply(word_list["nursultan"]["response"], mention_author=False)
             await discord_log(f"Nursultan trigger", message)
-            await message.reply("кряк нурика ратка", mention_author=False)
 
-        if check_word_list(word_list["download"]["trigger"], message):
+        if check_word_list(word_list["download"]["trigger"], message) and use_word("download"):
             await message.reply(word_list["download"]["response"], mention_author=True)
             await discord_log(f"Download trigger", message)
 
-        if check_word_list(word_list["crash"]["trigger"], message):
+        if check_word_list(word_list["crash"]["trigger"], message) and use_word("crash"):
             await message.reply(word_list["crash"]["response"], mention_author=True)
             await discord_log(f"Crash trigger", message)
 
@@ -246,6 +254,19 @@ async def restart(ctx: discord.ApplicationContext):
 async def wordlist(ctx: discord.ApplicationContext):
     logger.debug(f"wordlist command executed")
     
-    await ctx.respond(f"Word list: ```yaml\n{raw_word_list}```")
+    await ctx.respond(f"```yaml\n{raw_word_list}```\nEnabled: `{use_word_list}`\nLoaded commands: {len(word_list.keys())}\nEnabled commands: {len([word for word in word_list.keys() if word_list[word]['enabled']])}")
+
+@bot.slash_command(name="toggle_word", description="Toggle word in word list")
+async def toggle_word(ctx: discord.ApplicationContext, 
+                      word: discord.Option(str, description="Word to toggle", choices=[word for word in word_list.keys()])): # type: ignore
+    if is_admin(ctx.author.id):
+        try:
+            word_list[word]["enabled"] = not word_list[word]["enabled"]
+            
+            await ctx.respond(f"Word `{word}` is now {'enabled' if word_list[word]['enabled'] else 'disabled'}")
+        except KeyError:
+            await ctx.respond(f"Word `{word}` not found")
+    else:
+        await ctx.respond("вали отсюда")
 
 bot.run(os.getenv("TOKEN"))
