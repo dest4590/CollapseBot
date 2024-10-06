@@ -15,8 +15,7 @@ from collapsepopularity.parsers.xenforo import Xenforo
 
 load_dotenv()
 
-intents = discord.Intents.default()
-intents.message_content = True
+intents = discord.Intents.all()
 
 activity = discord.Activity(type=discord.ActivityType.watching, name="/stats")
 
@@ -26,6 +25,9 @@ start_time = time.time()
 client = Minio("minio.collapseloader.org", os.getenv("S3-ACCESS-KEY"), os.getenv("S3-SECRET-KEY"))
 
 bold = lambda msg: f"**{msg}**"
+
+def get_emoji(name: str, id: int): 
+    return f"<:{name}:{id}>"
 
 user_cooldowns = {}
 cooldown_messages = {}
@@ -132,7 +134,7 @@ async def popularity(ctx: discord.ApplicationContext):
 
     await ctx.respond(
         f"""
-CollapseLoader popularity
+{get_emoji('users', 1292468955490812007)} CollapseLoader popularity
 
 Yougame: {bold(yougame)}
 Ezyhack: {bold(ezyhack)}
@@ -151,7 +153,7 @@ async def ping(ctx: discord.ApplicationContext):
         for m in api.get_monitors():
             pings += f'\n{m["name"]}: **{str(api.get_monitor_beats(int(m["id"]), 1)[-1]["ping"]) + "ms"}**'
 
-        await ctx.respond(f"CollapseLoader servers ping\n{pings}")
+        await ctx.respond(f"{get_emoji('ping', 1292468045662654568)} CollapseLoader servers ping\n{pings}")
 
 @bot.slash_command(name="clients", description="Get list of clients")
 async def clients(ctx: discord.ApplicationContext):
@@ -173,7 +175,7 @@ async def clients(ctx: discord.ApplicationContext):
 
     embed.set_footer(text=f"Client count: {len(clients)}")
 
-    await ctx.respond("Our clients:", embed=embed)
+    await ctx.respond(f"{get_emoji('clients', 1292469727125438575)} Our clients:", embed=embed)
 
 def get_bucket_size(bucket: str) -> int:
     total_size = 0
@@ -188,7 +190,7 @@ def get_bucket_size(bucket: str) -> int:
 async def size(ctx: discord.ApplicationContext):
     logger.debug(f"size command executed")
 
-    await ctx.respond(f"Total size of CollapseLoader: **{get_bucket_size('collapse')}** MB")
+    await ctx.respond(f"{get_emoji('data', 1292467157891813498)} Total size of CollapseLoader: **{get_bucket_size('collapse')}** MB")
 
 @bot.slash_command(name="stats", description="Get CollapseLoader stats")
 async def stats(ctx: discord.ApplicationContext):
@@ -200,17 +202,43 @@ async def stats(ctx: discord.ApplicationContext):
 
     embed = discord.Embed(color=discord.Color.dark_grey())
 
-    embed.add_field(name="Server Count", value=f"Total Servers: {len(bot.guilds)}")
-    embed.add_field(name="User Count", value=f"Total Users: {sum(guild.member_count for guild in bot.guilds)}")
-    embed.add_field(name="Uptime", value=f"Bot Uptime: {get_uptime_string()}")
-    embed.add_field(name="Word List", value=f"Word List Enabled: {use_word_list}")
-    embed.add_field(name="Bucket Size", value=f"Total Size: {get_bucket_size('collapse')} MB")
-    embed.add_field(name="Discord ping", value=f"{bot.latency * 1000:.2f}ms")
-    embed.add_field(name="Loader start", value=f"{endpoint_counts.get('api/analytics/start', '?')} times")
-    embed.add_field(name="Client start", value=f"{endpoint_counts.get('api/analytics/client', '?')} times")
+    embed.add_field(name=f"{get_emoji('servers', 1292468955490812007)} Server Count", value=str(len(bot.guilds)))
+    embed.add_field(name=f"{get_emoji('users', 1292468955490812007)} Total Users", value=str(sum(guild.member_count for guild in bot.guilds)))
+    embed.add_field(name=f"{get_emoji('timeline', 1292468817234104401)} Uptime", value=get_uptime_string())
+    embed.add_field(name=f"{get_emoji('wordlist', 1292468606021406771)} Word List enabled", value=use_word_list)
+    embed.add_field(name=f"{get_emoji('wordlist', 1292468606021406771)} Word List words", value=str(len(word_list.keys())))
+    embed.add_field(name=f"{get_emoji('data', 1292467157891813498)} Bucket Size", value=f"{get_bucket_size('collapse')} MB")
+    embed.add_field(name=f"{get_emoji('ping', 1292468045662654568)} Discord ping", value=f"{bot.latency * 1000:.2f}ms")
+    embed.add_field(name=f"{get_emoji('analytics', 1292468265108635729)} Loader start", value=f"{endpoint_counts.get('api/analytics/start', '?')} times")
+    embed.add_field(name=f"{get_emoji('analytics', 1292468265108635729)} Client start", value=f"{endpoint_counts.get('api/analytics/client', '?')} times")
+    embed.add_field(name=f"{get_emoji('commands', 1292469546283958403)} Command Count", value=str(len(bot.commands)))
+    
     embed.set_thumbnail(url=bot.user.avatar.url)
     
     await ctx.respond(embed=embed)
+
+@bot.slash_command(name="user", description="Get information about user")
+async def user(ctx: discord.ApplicationContext, user: discord.Option(discord.User, description="User to get information about")): # type: ignore
+    logger.debug(f"user command executed")
+    
+    if is_admin(ctx.author.id):    
+        user: discord.Member = user or ctx.author
+
+        embed = discord.Embed(color=discord.Color.dark_grey())
+        embed.set_author(name=user.name, icon_url=user.avatar.url)
+        embed.add_field(name=f"{get_emoji('id', 1292470345755791360)} ID", value=user.id)
+        embed.add_field(name=f"{get_emoji('timeline', 1292468817234104401)} Created at", value=user.created_at.strftime("%d.%m.%Y %H:%M:%S"))
+        embed.add_field(name=f"{get_emoji('timeline', 1292468817234104401)} Joined at", value=user.joined_at.strftime("%d.%m.%Y %H:%M:%S") if user.joined_at else "Not in server")
+        
+        user_roles = user.roles
+        user_roles.remove(ctx.guild.default_role)
+        
+        embed.add_field(name=f"{get_emoji('roles', 1292470773700755549)} Roles", value=", ".join(role.name for role in user_roles) if user_roles else "No roles")
+        embed.add_field(name=f"{get_emoji('status', 1292471789628428409)} Status", value=user.status.value.capitalize())
+        
+        embed.set_thumbnail(url=user.avatar.url)
+
+        await ctx.respond(embed=embed)
 
 @bot.slash_command(name="socials", description="Get CollapseLoader socials")
 async def socials(ctx: discord.ApplicationContext):
@@ -263,7 +291,7 @@ def get_uptime_string():
     if uptime_hours > 0:
         uptime_string += f"{uptime_hours} hours, "
     if uptime_minutes > 0:
-        uptime_string += f"{uptime_minutes % 60} minutes, "
+        uptime_string += f"{uptime_minutes % 60} minutes and "
         
     uptime_string += f"{uptime_seconds % 60} seconds"
 
@@ -274,17 +302,6 @@ async def uptime(ctx: discord.ApplicationContext):
     logger.debug(f"uptime command executed")
     
     await ctx.respond(f"Bot running for {get_uptime_string()}")
-
-@bot.slash_command(name="update", description="Restart CollapseBot")
-async def restart(ctx: discord.ApplicationContext):
-    logger.debug(f"update command executed")
-    
-    if is_admin(ctx.author.id):
-        await ctx.respond("Updating...")
-        os.system("git pull")
-        os.system("bash rebuild.sh")
-    else: 
-        await ctx.respond("вали отсюда")
 
 @bot.slash_command(name="wordlist", description="Get word list")
 async def wordlist(ctx: discord.ApplicationContext):
