@@ -87,7 +87,7 @@ async def send_cooldown_message(message: discord.Message):
 
 @bot.event
 async def on_message(message: discord.Message):
-    if message.author.id != bot.user.id and use_word_list and message.channel.category_id != 1231330787396161783:
+    if message.author.id != bot.user.id and use_word_list and message.channel.category_id == 1231330786947367015:
         if check_word_list(word_list["nursultan"]["trigger"], message) and use_word("nursultan"):
             if not check_cooldown(message.author.id):
                 await message.reply(word_list["nursultan"]["response"], mention_author=False)
