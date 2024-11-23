@@ -212,6 +212,9 @@ async def clients(ctx: discord.ApplicationContext):
     logger.debug(f"clients command executed")
 
     clients = requests.get("https://web.collapseloader.org/api/clients", headers={'User-Agent': 'CollapseBot'}).json()
+    fabric_clients = requests.get("https://web.collapseloader.org/api/fabric_clients", headers={'User-Agent': 'CollapseBot'}).json()
+
+    clients = clients + fabric_clients
 
     embed = discord.Embed(color=discord.Colour.dark_grey())
 
@@ -219,7 +222,8 @@ async def clients(ctx: discord.ApplicationContext):
         name="Clients list",
         value="\n".join(
             [
-                f"{client['name']} - {client['version']} {'[Hidden]' if not client['show_in_loader'] else ''}"
+                f"{client['name']} - {client['version']} {'[Hidden]' if not client['show_in_loader'] else ''}{f' - Fabric' if client['fabric'] else ''}"
+
                 for client in clients
             ]
         ),
