@@ -1,30 +1,27 @@
 nursultan:
-  trigger:
-    - нурик
-    - нурсултан
+    trigger:
+        - нурик
+        - нурсултан
 
-  response:
-    кряк нурика ратка
-  
-  enabled: true
-    
+    response: кряк нурика ратка
+
+    enabled: true
+
 download:
-  trigger:
-    - как скачать
-    - how to download
-  response:
-    качать тут https://collapseloader.org
+    trigger:
+        - как скачать
+        - how to download
+    response: качать тут https://collapseloader.org
 
-  enabled: true
-    
+    enabled: true
+
 crash:
-  trigger:
-    - crash
-    - крашит
-    - вылетает
-    - не запускается
+    trigger:
+        - crash
+        - крашит
+        - вылетает
+        - не запускается
 
-  response:
-      создай тикет в <#1231330786481930347>
+    response: создай тикет в <#1231330786481930347>
 
-  enabled: true
+    enabled: true

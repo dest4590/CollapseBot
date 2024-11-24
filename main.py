@@ -211,8 +211,14 @@ async def ping(ctx: discord.ApplicationContext):
 async def clients(ctx: discord.ApplicationContext):
     logger.debug(f"clients command executed")
 
-    clients = requests.get("https://web.collapseloader.org/api/clients", headers={'User-Agent': 'CollapseBot'}).json()
-    fabric_clients = requests.get("https://web.collapseloader.org/api/fabric_clients", headers={'User-Agent': 'CollapseBot'}).json()
+    clients = requests.get(
+        "https://web.collapseloader.org/api/clients",
+        headers={"User-Agent": "CollapseBot"},
+    ).json()
+    fabric_clients = requests.get(
+        "https://web.collapseloader.org/api/fabric_clients",
+        headers={"User-Agent": "CollapseBot"},
+    ).json()
 
     clients = clients + fabric_clients
 
@@ -223,7 +229,6 @@ async def clients(ctx: discord.ApplicationContext):
         value="\n".join(
             [
                 f"{client['name']} - {client['version']} {'[Hidden]' if not client['show_in_loader'] else ''}{f' - Fabric' if client['fabric'] else ''}"
-
                 for client in clients
             ]
         ),
@@ -240,7 +245,10 @@ async def clients(ctx: discord.ApplicationContext):
 async def client_cmd(ctx: discord.ApplicationContext, client: discord.Option(str, description="Client to get information about")):  # type: ignore
     logger.debug(f"client command executed")
 
-    clients = requests.get("https://web.collapseloader.org/api/clients", headers={'User-Agent': 'CollapseBot'}).json()
+    clients = requests.get(
+        "https://web.collapseloader.org/api/clients",
+        headers={"User-Agent": "CollapseBot"},
+    ).json()
 
     client = next((c for c in clients if client.lower() in c["name"].lower()), None)
 
@@ -316,7 +324,10 @@ async def size(ctx: discord.ApplicationContext):
 async def stats(ctx: discord.ApplicationContext):
     logger.debug(f"stats command executed")
 
-    analytics = requests.get("https://web.collapseloader.org/api/counter", headers={'User-Agent': 'CollapseBot'}).json()
+    analytics = requests.get(
+        "https://web.collapseloader.org/api/counter",
+        headers={"User-Agent": "CollapseBot"},
+    ).json()
 
     endpoint_counts = {entry["endpoint"]: entry["count"] for entry in analytics}
 
@@ -500,7 +511,7 @@ async def toggle_word(
     ctx: discord.ApplicationContext,
     word: discord.Option(
         str, description="Word to toggle", choices=[word for word in word_list.keys()]
-    ), # type: ignore
+    ),  # type: ignore
 ):
     if is_admin(ctx.author.id):
         try:
