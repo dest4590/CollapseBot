@@ -237,7 +237,7 @@ async def clients(ctx: discord.ApplicationContext):
 
 
 @bot.slash_command(name="client", description="Get information about client")
-async def client(ctx: discord.ApplicationContext, client: discord.Option(str, description="Client to get information about")):  # type: ignore
+async def client_cmd(ctx: discord.ApplicationContext, client: discord.Option(str, description="Client to get information about")):  # type: ignore
     logger.debug(f"client command executed")
 
     clients = requests.get("https://web.collapseloader.org/api/clients", headers={'User-Agent': 'CollapseBot'}).json()
