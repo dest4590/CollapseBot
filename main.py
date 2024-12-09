@@ -468,7 +468,7 @@ async def cmd_use_word_list(ctx: discord.ApplicationContext):
             f"Word list is now {'enabled' if use_word_list else 'disabled'}"
         )
     else:
-        await ctx.respond("вали отсюда")
+        await ctx.respond("https://cdn.collapseloader.org/bot/litvin.mp4")
 
 
 def get_uptime_string():
@@ -523,7 +523,7 @@ async def toggle_word(
         except KeyError:
             await ctx.respond(f"Word `{word}` not found")
     else:
-        await ctx.respond("вали отсюда")
+        await ctx.respond("https://cdn.collapseloader.org/bot/litvin.mp4")
 
 
 bot.run(os.getenv("TOKEN"))
