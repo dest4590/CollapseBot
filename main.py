@@ -34,6 +34,7 @@ def get_emoji(name: str, id: int):
     return f"<:{name}:{id}>"
 
 
+admin_roles = [1231334945041944628, 1231330785886212177, 1240356360604881027]
 user_cooldowns = {}
 cooldown_messages = {}
 trigger_counts = {}
@@ -524,6 +525,84 @@ async def toggle_word(
             await ctx.respond(f"Word `{word}` not found")
     else:
         await ctx.respond("https://cdn.collapseloader.org/bot/litvin.mp4")
+
+# from anarchybot
+@bot.slash_command(name="close", description="Close forum thread")
+async def close(ctx: discord.ApplicationContext):
+    if any(role.id in admin_roles for role in ctx.author.roles):
+        logger.debug(f"close command executed")
+        thread = bot.get_channel(ctx.channel_id)
+
+        new_name = thread.name
+        if len(new_name) > 70:
+            new_name = new_name[:70]
+        await thread.edit(name=f"{new_name} (CLOSED)")
+
+        embed = discord.Embed(
+            title="Thread Closed",
+            description="✅ Thread closed",
+            color=discord.Color.red(),
+        )
+        await ctx.respond(embed=embed)
+        await thread.edit(locked=True)
+        await thread.archive()
+
+
+@bot.slash_command(name="added", description="Mark forum thread as added")
+async def add(ctx: discord.ApplicationContext):
+    if any(role.id in admin_roles for role in ctx.author.roles):
+        logger.debug(f"added command executed")
+        thread = bot.get_channel(ctx.channel_id)
+
+        new_name = thread.name
+        if len(new_name) > 70:
+            new_name = new_name[:70]
+        await thread.edit(name=f"{new_name} (ADDED)")
+        await thread.archive()
+
+        embed = discord.Embed(
+            title="Thread Added",
+            description="➕ Thread marked as added",
+            color=discord.Color.green(),
+        )
+        await ctx.send(embed=embed)
+
+
+class ThreadConfirmView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60)
+
+    @discord.ui.button(label="Yes", style=discord.ButtonStyle.success)
+    async def yes_button(
+        self, button: discord.ui.Button, interaction: discord.Interaction
+    ):
+        if any(role.id in admin_roles for role in interaction.user.roles):
+            await bot.get_channel(interaction.channel_id).delete()
+            self.stop()
+
+    @discord.ui.button(label="No", style=discord.ButtonStyle.danger)
+    async def no_button(
+        self, button: discord.ui.Button, interaction: discord.Interaction
+    ):
+        if any(role.id in admin_roles for role in interaction.user.roles):
+            await interaction.response.send_message(
+                "Operation cancelled", ephemeral=True
+            )
+            self.stop()
+
+
+@bot.slash_command(name="remove", description="Remove forum thread")
+async def remove(ctx: discord.ApplicationContext):
+    if any(role.id in admin_roles for role in ctx.author.roles):
+        logger.debug(f"confirm command executed")
+
+        embed = discord.Embed(
+            title="Confirmation",
+            description="⚠️ Are you sure you want to proceed?",
+            color=discord.Color.blue(),
+        )
+        view = ThreadConfirmView()
+        await ctx.send(embed=embed, view=view)
 
 
 bot.run(os.getenv("TOKEN"))
