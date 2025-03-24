@@ -605,4 +605,27 @@ async def remove(ctx: discord.ApplicationContext):
         await ctx.send(embed=embed, view=view)
 
 
+@bot.slash_command(name="lock", description="Lock and archive the thread")
+async def lock(ctx: discord.ApplicationContext):
+    if any(role.id in admin_roles for role in ctx.author.roles):
+        logger.debug(f"lock command executed")
+        thread = bot.get_channel(ctx.channel_id)
+
+        embed = discord.Embed(
+            title="Thread Locked",
+            description="🔒 Thread locked and archived",
+            color=discord.Color.red(),
+        )
+        await ctx.respond(embed=embed)
+
+        try:
+            await thread.archive()
+        except Exception:
+            pass
+
+        try:
+            await thread.edit(locked=True)
+        except Exception:
+            pass
+
 bot.run(os.getenv("TOKEN"))
