@@ -284,8 +284,16 @@ async def client_cmd(ctx: discord.ApplicationContext, client: discord.Option(str
             name=f"{get_emoji('question', 1306166594065530950)} Fabric",
             value=client["fabric"],
         )
-        created_at = datetime.strptime(client["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ")
-        updated_at = datetime.strptime(client["updated_at"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        
+        try:
+            created_at = datetime.strptime(client["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        except ValueError:
+            created_at = datetime.fromisoformat(client["created_at"].replace('Z', '+00:00'))
+            
+        try:
+            updated_at = datetime.strptime(client["updated_at"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        except ValueError:
+            updated_at = datetime.fromisoformat(client["updated_at"].replace('Z', '+00:00'))
 
         embed.add_field(
             name=f"{get_emoji('timeline', 1292468817234104401)} Created at",
