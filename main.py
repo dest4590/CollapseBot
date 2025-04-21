@@ -51,7 +51,7 @@ def check_cooldown(user_id: int) -> bool:
             trigger_counts[user_id] = 1
         else:
             trigger_counts[user_id] += 1
-        if trigger_counts[user_id] >= 3:
+        if trigger_counts[user_id] >= 2:
             return True
     else:
         user_cooldowns[user_id] = current_time
