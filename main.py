@@ -26,7 +26,7 @@ if not validate_config():
 
 intents = discord.Intents.all()
 activity = discord.Activity(
-    type=discord.ActivityType.watching, name="/stats • CollapseLoader"
+    type=discord.ActivityType.watching, name="/stats"
 )
 bot = discord.Bot(intents=intents, activity=activity, status=discord.Status.online)
 
