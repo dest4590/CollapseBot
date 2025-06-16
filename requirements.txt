@@ -1,10 +1,7 @@
-bs4==0.0.2
 py-cord
 pydotenv==0.0.7
 requests==2.32.3
-uptime_kuma_api==1.2.1
 python-dotenv==1.0.1
-lxml==5.3.0
 pyyaml==6.0.2
 loguru==0.7.2
 minio==7.2.11
