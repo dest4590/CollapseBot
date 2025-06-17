@@ -195,26 +195,17 @@ class AdminCog(commands.Cog):
             await thread.edit(name=f"{new_name} (ADDED)")
 
             embed = discord.Embed(
-                title="➕ Feature Added",
-                description="The requested feature has been implemented and added.",
+                title="➕ Client Added",
+                description="The requested client has been added.",
                 color=0x00D4AA,
             )
             embed.add_field(
                 name="🎉 Status Update",
-                value="Feature request marked as **ADDED**",
+                value="Client request marked as **ADDED**",
                 inline=False,
             )
             embed.add_field(name="👤 Added by", value=ctx.author.mention, inline=True)
-            embed.add_field(
-                name="📦 Availability",
-                value="Feature should be available in the next update.",
-                inline=True,
-            )
-            embed.set_footer(
-                text=f"Original title: {original_name}",
-                icon_url=ctx.author.display_avatar.url,
-            )
-
+            
             await ctx.followup.send(embed=embed)
             await thread.archive()
 
