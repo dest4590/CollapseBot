@@ -26,5 +26,10 @@ PROTECTED_ROLES = [
     1378339428593963161,  # Support
 ]
 
+# Ignored categories for automatic response
+IGNORED_CATEGORIES = [
+    1348431299290857552,
+]
+
 # API endpoints
 API_BASE_URL = "https://web.collapseloader.org/api"
