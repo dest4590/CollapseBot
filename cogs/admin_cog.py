@@ -375,7 +375,7 @@ class AdminCog(commands.Cog):
 
         await ctx.followup.send(embed=embed)
 
-    @commands.slash_command(name="delete_all_channels_from_category", description="Delete all channels from a category")
+    @commands.slash_command(name="delete_category_channels", description="Delete all channels from a category")
     async def delete_all_channels_from_category(self, ctx: discord.ApplicationContext, category: discord.CategoryChannel):
         if ctx.author.id != config.ADMIN_USER_ID:
             embed = discord.Embed(
