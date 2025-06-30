@@ -375,6 +375,26 @@ class AdminCog(commands.Cog):
 
         await ctx.followup.send(embed=embed)
 
+    @commands.slash_command(name="delete_all_channels_from_category", description="Delete all channels from a category")
+    async def delete_all_channels_from_category(self, ctx: discord.ApplicationContext, category: discord.CategoryChannel):
+        if ctx.author.id != config.ADMIN_USER_ID:
+            embed = discord.Embed(
+                title="❌ Access Denied",
+                description="This command is only available to the main administrator.",
+                color=0xFF4444,
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+
+        await ctx.defer()
+        for channel in category.channels:
+            await channel.delete()
+        embed = discord.Embed(
+            title="✅ Channels Deleted",
+            description=f"All channels in {category.name} have been deleted.",
+            color=0x00FF88,
+        )
+        await ctx.followup.send(embed=embed)
 
 def setup(bot: discord.Bot):
     bot.add_cog(AdminCog(bot))

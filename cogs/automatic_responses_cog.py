@@ -130,7 +130,7 @@ class AutomaticResponsesCog(commands.Cog):
 
         if not self.automatic_responses:
             return
-        
+
         if message.channel.category_id in config.IGNORED_CATEGORIES:
             return
 

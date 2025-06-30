@@ -20,7 +20,6 @@ def get_client() -> Optional[Minio]:
                 secret_key=config.MINIO_SECRET_KEY,
                 secure=True,
             )
-            # Test connection
             _client.list_buckets()
             logger.info("Minio client initialized successfully")
         except S3Error as e:
