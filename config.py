@@ -7,12 +7,6 @@ load_dotenv()
 # Bot configuration
 TOKEN = os.getenv("TOKEN")
 
-# Minio configuration
-MINIO_ENDPOINT = "minio.collapseloader.org"
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
-MINIO_BUCKET = "collapse"
-
 # Discord IDs
 ADMIN_USER_ID = 556864778576986144
 ADMIN_ROLES = [1231334945041944628, 1231330785886212177, 1240356360604881027]

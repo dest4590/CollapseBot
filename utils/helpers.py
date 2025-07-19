@@ -49,26 +49,6 @@ def get_uptime_string(start_time: float) -> str:
     return uptime_string
 
 
-def get_bucket_size(bucket: str) -> str:
-    """Calculate total size of bucket in MB"""
-    try:
-        from utils.storage import get_client
-
-        client = get_client()
-        if client is None:
-            logger.error("Storage client is None")
-            return "Error"
-        total_size = 0
-        objects = client.list_objects(bucket, recursive=True)
-        for obj in objects:
-            total_size += obj.size or 0
-
-        return f"{total_size / 1024 / 1024:.2f}"
-    except Exception as e:
-        logger.error(f"Failed to get bucket size: {e}")
-        return "Error"
-
-
 def bold(msg: str) -> str:
     """Format text as bold for Discord markdown"""
     return f"**{msg}**"
@@ -77,9 +57,7 @@ def bold(msg: str) -> str:
 def validate_config() -> bool:
     """Validate that all required config values are present"""
     required_vars = [
-        "TOKEN",
-        "MINIO_ACCESS_KEY",
-        "MINIO_SECRET_KEY",
+        "TOKEN"
     ]
 
     missing_vars = []

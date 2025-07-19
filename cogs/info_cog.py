@@ -7,7 +7,7 @@ from discord.ext import commands
 from loguru import logger
 
 import config
-from utils.helpers import get_bucket_size, get_emoji, get_uptime_string
+from utils.helpers import get_emoji, get_uptime_string
 
 
 class InfoCog(commands.Cog):
@@ -258,11 +258,9 @@ class InfoCog(commands.Cog):
                 inline=True,
             )
 
-            storage_size = get_bucket_size(config.MINIO_BUCKET)
             embed.add_field(
                 name="💾 System Statistics",
                 value=(
-                    f"{get_emoji('data', 1292467157891813498)} **{storage_size} MB** storage\n"
                     f"{get_emoji('commands', 1292469546283958403)} **{len(self.bot.commands)}** commands\n"
                 ),
                 inline=True,
@@ -298,129 +296,6 @@ class InfoCog(commands.Cog):
             error_embed = discord.Embed(
                 title="❌ Error",
                 description="Failed to fetch statistics. Please try again later.",
-                color=0xFF4444,
-            )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
-
-    @commands.slash_command(
-        name="size", description="Get size of CollapseLoader storage"
-    )
-    async def size(self, ctx: discord.ApplicationContext):
-        logger.debug(f"size command executed")
-
-        await ctx.defer()
-
-        try:
-            size = get_bucket_size(config.MINIO_BUCKET)
-
-            embed = discord.Embed(
-                title=f"{get_emoji('data', 1292467157891813498)} Storage Information",
-                description=f"**{size} MB** total storage used",
-                color=0x00D4AA,
-            )
-
-            size_float = float(size) if size != "Error" else 0
-            max_size = 10000
-            progress = min(size_float / max_size, 1.0)
-            progress_bar = "█" * int(progress * 20) + "░" * (20 - int(progress * 20))
-
-            embed.add_field(
-                name="📊 Usage",
-                value=f"`{progress_bar}` {progress*100:.1f}%",
-                inline=False,
-            )
-
-            embed.set_footer(text="CollapseLoader Storage")
-
-            await ctx.followup.send(embed=embed)
-
-        except Exception as e:
-            logger.error(f"Failed to get storage size: {e}")
-            error_embed = discord.Embed(
-                title="❌ Storage Error",
-                description="Unable to fetch storage information.",
-                color=0xFF4444,
-            )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
-
-    @commands.slash_command(
-        name="files", description="Get list of files in CollapseLoader storage"
-    )
-    async def files(self, ctx: discord.ApplicationContext):
-        logger.debug(f"files command executed")
-
-        await ctx.defer()
-
-        try:
-            from utils.storage import get_client
-
-            client = get_client()
-
-            if client is None:
-                error_embed = discord.Embed(
-                    title="❌ Storage Unavailable",
-                    description="Unable to connect to storage system.",
-                    color=0xFF4444,
-                )
-                await ctx.followup.send(embed=error_embed, ephemeral=True)
-                return
-
-            objects = list(client.list_objects(config.MINIO_BUCKET, recursive=True))
-
-            if not objects:
-                embed = discord.Embed(
-                    title="📁 File Storage",
-                    description="No files found in storage.",
-                    color=0xFFAA00,
-                )
-                await ctx.followup.send(embed=embed)
-                return
-
-            embed = discord.Embed(
-                title="📁 File Storage",
-                color=0x5865F2,
-                description=f"**{len(objects)}** files in storage",
-            )
-
-            file_list = []
-            total_size = 0
-
-            for obj in objects[:15]:
-                size_mb = (obj.size / 1024 / 1024) if obj.size else 0
-                total_size += size_mb
-                file_list.append(f"📄 `{obj.object_name}` - **{size_mb:.2f} MB**")
-
-            if len(objects) > 15:
-                file_list.append(f"... and **{len(objects) - 15}** more files")
-
-            embed.add_field(
-                name="📋 Files",
-                value="\n".join(file_list),
-                inline=False,
-            )
-
-            embed.add_field(
-                name="📊 Summary",
-                value=f"**{total_size:.2f} MB** total size\n**{len(objects)}** files",
-                inline=True,
-            )
-
-            embed.set_footer(
-                text="CollapseLoader File Storage",
-                icon_url=(
-                    self.bot.user.avatar.url
-                    if self.bot.user and self.bot.user.avatar
-                    else None
-                ),
-            )
-
-            await ctx.followup.send(embed=embed)
-
-        except Exception as e:
-            logger.error(f"Failed to list files: {e}")
-            error_embed = discord.Embed(
-                title="❌ File System Error",
-                description="Unable to retrieve file list.",
                 color=0xFF4444,
             )
             await ctx.followup.send(embed=error_embed, ephemeral=True)
