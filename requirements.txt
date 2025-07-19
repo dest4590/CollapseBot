@@ -1,7 +1,6 @@
 py-cord
 pydotenv==0.0.7
-requests==2.32.3
-python-dotenv==1.0.1
+requests==2.32.4
+python-dotenv==1.1.1
 pyyaml==6.0.2
-loguru==0.7.2
-minio==7.2.11
+loguru==0.7.3
