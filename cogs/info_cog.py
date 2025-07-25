@@ -26,13 +26,6 @@ class InfoCog(commands.Cog):
                 headers={"User-Agent": "CollapseBot"},
                 timeout=10,
             ).json()
-            fabric_clients = requests.get(
-                f"{config.API_BASE_URL}/fabric_clients",
-                headers={"User-Agent": "CollapseBot"},
-                timeout=10,
-            ).json()
-
-            clients = clients + fabric_clients
 
             embed = discord.Embed(
                 title=f"{get_emoji('clients', 1292469727125438575)} Client Library",
@@ -40,14 +33,11 @@ class InfoCog(commands.Cog):
                 description=f"📊 **{len(clients)}** clients available",
             )
 
-            regular_clients = [c for c in clients if not c.get("fabric", False)]
-            fabric_clients_list = [c for c in clients if c.get("fabric", False)]
-
-            if regular_clients:
+            if clients:
                 regular_list = "\n".join(
                     [
-                        f"{'🔒' if not client['show_in_loader'] else '🟢'} **{client['name']}** `{client['version']}`"
-                        for client in regular_clients
+                        f"{'🔒' if not client['show'] else '🟢'} **{client['name']}** `{client['version']}`"
+                        for client in clients
                     ]
                 )
                 embed.add_field(
@@ -56,23 +46,6 @@ class InfoCog(commands.Cog):
                         regular_list[:1024]
                         if len(regular_list) <= 1024
                         else regular_list[:1021] + "..."
-                    ),
-                    inline=False,
-                )
-
-            if fabric_clients_list:
-                fabric_list = "\n".join(
-                    [
-                        f"{'🔒' if not client['show_in_loader'] else '🟢'} **{client['name']}** `{client['version']}`"
-                        for client in fabric_clients_list
-                    ]
-                )
-                embed.add_field(
-                    name="Fabric Clients",
-                    value=(
-                        fabric_list[:1024]
-                        if len(fabric_list) <= 1024
-                        else fabric_list[:1021] + "..."
                     ),
                     inline=False,
                 )
@@ -103,11 +76,15 @@ class InfoCog(commands.Cog):
             )
             await ctx.followup.send(embed=error_embed, ephemeral=True)
 
+    def get_clients(self):
+        """Fetch the list of clients from the API."""
+        return config.CLIENTS
+
     @commands.slash_command(name="client", description="Get information about client")
     async def client_cmd(
         self,
         ctx: discord.ApplicationContext,
-        client: discord.Option(str, description="Client to get information about"),  # type: ignore
+        client: discord.Option(str, description="Client to get information about", autocomplete=discord.utils.basic_autocomplete(get_clients)),  # type: ignore
     ):
         logger.debug(f"client command executed")
 
@@ -121,12 +98,18 @@ class InfoCog(commands.Cog):
             ).json()
 
             found_client = next(
-                (c for c in clients if client.lower() in c["name"].lower()), None
+                (
+                    c
+                    for c in clients
+                    if client.lower() in c["name"].lower()
+                    or client.lower() in c["filename"].lower()
+                ),
+                None,
             )
 
             if found_client:
                 embed = discord.Embed(
-                    title=f"🎯 {found_client['name']}",
+                    title=found_client["name"],
                     color=0x00FF88 if found_client.get("working", False) else 0xFF4444,
                     description=f"{'✅ Working' if found_client.get('working', False) else '❌ Not Working'}",
                 )
@@ -136,14 +119,10 @@ class InfoCog(commands.Cog):
                     value=f"`{found_client['version']}`",
                     inline=True,
                 )
+
                 embed.add_field(
                     name=f"{get_emoji('file', 1306166288649027584)} Filename",
                     value=f"`{found_client['filename']}`",
-                    inline=True,
-                )
-                embed.add_field(
-                    name=f"{get_emoji('category', 1306166447399112744)} Category",
-                    value=f"`{found_client['category']}`",
                     inline=True,
                 )
 
@@ -154,13 +133,10 @@ class InfoCog(commands.Cog):
                 )
 
                 status_indicators = []
+
                 if found_client.get("working"):
                     status_indicators.append("✅ Working")
-                if found_client.get("internal"):
-                    status_indicators.append("🔒 Internal")
-                if found_client.get("fabric"):
-                    status_indicators.append("🧵 Fabric")
-                if found_client.get("show_in_loader"):
+                if found_client.get("show"):
                     status_indicators.append("👁️ Public")
 
                 if status_indicators:
@@ -179,23 +155,9 @@ class InfoCog(commands.Cog):
                         found_client["created_at"].replace("Z", "+00:00")
                     )
 
-                try:
-                    updated_at = datetime.strptime(
-                        found_client["updated_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                    )
-                except ValueError:
-                    updated_at = datetime.fromisoformat(
-                        found_client["updated_at"].replace("Z", "+00:00")
-                    )
-
                 embed.add_field(
                     name=f"{get_emoji('timeline', 1292468817234104401)} Created",
                     value=f"<t:{int(created_at.timestamp())}:R>",
-                    inline=True,
-                )
-                embed.add_field(
-                    name=f"{get_emoji('timeline', 1292468817234104401)} Updated",
-                    value=f"<t:{int(updated_at.timestamp())}:R>",
                     inline=True,
                 )
 

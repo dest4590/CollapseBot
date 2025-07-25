@@ -2,6 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
+from logger import logger
+
 load_dotenv()
 
 # Bot configuration
@@ -26,4 +28,16 @@ IGNORED_CATEGORIES = [
 ]
 
 # API endpoints
-API_BASE_URL = "https://web.collapseloader.org/api"
+API_BASE_URL = "https://api.collapseloader.org/"
+CLIENTS = []
+
+try:
+    import requests
+
+    response = requests.get(f"{API_BASE_URL}clients")
+    response.raise_for_status()
+    CLIENTS = response.json()
+    CLIENTS = [client["name"] for client in CLIENTS if client.get("show", True)]
+except requests.RequestException as e:
+    logger.error(f"Failed to fetch clients from API: {e}")
+    CLIENTS = []

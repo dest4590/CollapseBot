@@ -6,28 +6,20 @@ import discord
 import yaml
 from discord.ext import commands
 from dotenv import load_dotenv
-from loguru import logger
 
 import config
+from logger import logger
 from utils.helpers import validate_config
 
 load_dotenv()
 
-logger.remove()
-logger.add(
-    sys.stderr,
-    level="INFO",
-    format="<green>{time}</green> | <level>{level}</level> | <level>{message}</level>",
-)
 
 if not validate_config():
     logger.error("Configuration validation failed. Exiting.")
     sys.exit(1)
 
 intents = discord.Intents.all()
-activity = discord.Activity(
-    type=discord.ActivityType.watching, name="/stats"
-)
+activity = discord.Activity(type=discord.ActivityType.watching, name="/stats")
 bot = discord.Bot(intents=intents, activity=activity, status=discord.Status.online)
 
 start_time = time.time()
@@ -78,6 +70,7 @@ async def on_command_error(ctx, error):
 
     if isinstance(error, commands.CommandNotFound):
         return
+
     elif isinstance(error, commands.MissingPermissions):
         embed = discord.Embed(
             title="❌ Missing Permissions",
@@ -103,11 +96,13 @@ async def on_command_error(ctx, error):
             description="An unexpected error occurred while processing your command.",
             color=0xFF4444,
         )
+
         embed.add_field(
             name="💡 What to do",
             value="• Try the command again\n• Contact an administrator if the issue persists",
             inline=False,
         )
+
         await ctx.respond(embed=embed, ephemeral=True)
 
 

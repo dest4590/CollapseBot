@@ -2,9 +2,9 @@ import time
 from typing import Optional
 
 import discord
-from loguru import logger
 
 import config
+from logger import logger
 
 
 def get_emoji(name: str, id: int):
@@ -56,9 +56,7 @@ def bold(msg: str) -> str:
 
 def validate_config() -> bool:
     """Validate that all required config values are present"""
-    required_vars = [
-        "TOKEN"
-    ]
+    required_vars = ["TOKEN"]
 
     missing_vars = []
     for var in required_vars:
