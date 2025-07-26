@@ -22,7 +22,6 @@ class VotingCog(commands.Cog):
 
     @tasks.loop(hours=1)
     async def check_votes(self):
-        """Проверка голосований, достигших 24 часов, и их обработка"""
         current_time = datetime.utcnow()
 
         for thread_id, data in list(self.active_votes.items()):
@@ -115,7 +114,6 @@ class VotingCog(commands.Cog):
         name="vote_status", description="Проверить статус активных голосований"
     )
     async def vote_status(self, ctx: discord.ApplicationContext):
-        """Показать статус всех активных голосований"""
         if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
             embed = discord.Embed(
                 title="❌ Доступ запрещён",
@@ -158,8 +156,7 @@ class VotingCog(commands.Cog):
     @commands.slash_command(
         name="end_vote", description="Завершить голосование вручную"
     )
-    async def end_vote(self, ctx: discord.ApplicationContext, thread_id: str):
-        """Ручное завершение конкретного голосования"""
+    async def end_vote(self, ctx: discord.ApplicationContext):
         if ctx.author.id != config.ADMIN_USER_ID:
             embed = discord.Embed(
                 title="❌ Доступ запрещён",
@@ -171,62 +168,35 @@ class VotingCog(commands.Cog):
 
         await ctx.defer()
 
-        try:
-            thread_id_int = int(thread_id)
-            if thread_id_int not in self.active_votes:
-                embed = discord.Embed(
-                    title="❌ Голосование не найдено",
-                    description="Активное голосование для указанного ID ветки не найдено.",
-                    color=0xFF4444,
-                )
-                await ctx.respond(embed=embed, ephemeral=True)
-                return
-
-            thread = self.bot.get_channel(thread_id_int)
-            if not isinstance(thread, discord.Thread):
-                embed = discord.Embed(
-                    title="❌ Неверная ветка",
-                    description="Указанный ID не соответствует ветке.",
-                    color=0xFF4444,
-                )
-                await ctx.respond(embed=embed, ephemeral=True)
-                return
-
-            message = await thread.fetch_message(
-                self.active_votes[thread_id_int]["message_id"]
-            )
-            yes_votes = next(
-                (r.count - 1 for r in message.reactions if str(r.emoji) == "✅"), 0
-            )
-            no_votes = next(
-                (r.count - 1 for r in message.reactions if str(r.emoji) == "❌"), 0
-            )
-
+        thread = ctx.channel
+        if not isinstance(thread, discord.Thread):
             embed = discord.Embed(
-                title="🗳️ Голосование завершено",
-                description=f"Голосование в {thread.mention} было завершено вручную.",
-                color=0x00FF88,
-            )
-            embed.add_field(name="✅ Голосов за", value=str(yes_votes), inline=True)
-            embed.add_field(name="❌ Голосов против", value=str(no_votes), inline=True)
-
-            await thread.send(embed=embed)
-            await thread.edit(archived=True)
-            del self.active_votes[thread_id_int]
-
-            await ctx.respond(embed=embed, ephemeral=True)
-            logger.info(
-                f"Голосование завершено вручную в ветке {thread_id} пользователем {ctx.author.id}"
-            )
-
-        except ValueError:
-            embed = discord.Embed(
-                title="❌ Неверный ID ветки",
-                description="Пожалуйста, укажите действительный ID ветки.",
+                title="❌ Неверная ветка",
+                description="Эту команду можно использовать только внутри ветки.",
                 color=0xFF4444,
             )
             await ctx.respond(embed=embed, ephemeral=True)
-        except discord.HTTPException as e:
+            return
+
+        thread_id = thread.id
+        if thread_id not in self.active_votes:
+            embed = discord.Embed(
+                title="❌ Голосование не найдено",
+                description="Активное голосование для этой ветки не найдено.",
+                color=0xFF4444,
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+
+        try:
+            del self.active_votes[thread_id]
+            embed = discord.Embed(
+                title="✅ Голосование завершено",
+                description="Голосование в этой ветке было завершено вручную.",
+                color=0x00FF88,
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+        except Exception as e:
             logger.error(f"Не удалось завершить голосование для ветки {thread_id}: {e}")
             embed = discord.Embed(
                 title="❌ Ошибка",
