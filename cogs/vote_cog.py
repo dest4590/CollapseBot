@@ -82,7 +82,7 @@ class VotingCog(commands.Cog):
         try:
             embed = discord.Embed(
                 title="🗳️ Голосование за добавление клиента",
-                description="Проголосуйте, стоит ли добавить этого клиента в CollapseLoader.",
+                description="Проголосуйте, стоит ли добавить этот клиент в CollapseLoader.",
                 color=0x5865F2,
             )
             embed.add_field(
