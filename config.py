@@ -28,7 +28,7 @@ IGNORED_CATEGORIES = [
 ]
 
 # API endpoints
-API_BASE_URL = "https://api.collapseloader.org/"
+API_BASE_URL = "https://auth.collapseloader.org/"
 CLIENTS = []
 
 try:

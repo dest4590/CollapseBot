@@ -198,12 +198,14 @@ class InfoCog(commands.Cog):
             from main import start_time
 
             analytics = requests.get(
-                f"{config.API_BASE_URL}/counter",
+                f"{config.API_BASE_URL}/api/statistics",
                 headers={"User-Agent": "CollapseBot"},
                 timeout=10,
             ).json()
 
-            endpoint_counts = {entry["endpoint"]: entry["count"] for entry in analytics}
+            total_loader_launches = analytics.get("total_loader_launches", 0)
+            total_client_downloads = analytics.get("total_client_downloads", 0)
+            total_client_launches = analytics.get("total_client_launches", 0)
 
             embed = discord.Embed(
                 title="📊 CollapseLoader Statistics",
@@ -230,8 +232,9 @@ class InfoCog(commands.Cog):
 
             embed.add_field(
                 name="📈 Usage Analytics",
-                value=f"{get_emoji('analytics', 1292468265108635729)} **{endpoint_counts.get('api/analytics/start', '?'):,}** loader starts\n"
-                f"{get_emoji('analytics', 1292468265108635729)} **{endpoint_counts.get('api/analytics/client', '?'):,}** client launches",
+                value=f"{get_emoji('analytics', 1292468265108635729)} **{total_loader_launches}** loader starts\n"
+                f"{get_emoji('analytics', 1292468265108635729)} **{total_client_downloads}** client downloads\n"
+                f"{get_emoji('analytics', 1292468265108635729)} **{total_client_launches}** client launches",
                 inline=True,
             )
 
