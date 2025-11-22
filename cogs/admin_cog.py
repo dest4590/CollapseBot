@@ -205,7 +205,7 @@ class AdminCog(commands.Cog):
                 inline=False,
             )
             embed.add_field(name="👤 Added by", value=ctx.author.mention, inline=True)
-            
+
             await ctx.followup.send(embed=embed)
             await thread.archive()
 
@@ -375,8 +375,13 @@ class AdminCog(commands.Cog):
 
         await ctx.followup.send(embed=embed)
 
-    @commands.slash_command(name="delete_category_channels", description="Delete all channels from a category")
-    async def delete_all_channels_from_category(self, ctx: discord.ApplicationContext, category: discord.CategoryChannel):
+    @commands.slash_command(
+        name="delete_category_channels",
+        description="Delete all channels from a category",
+    )
+    async def delete_all_channels_from_category(
+        self, ctx: discord.ApplicationContext, category: discord.CategoryChannel
+    ):
         if ctx.author.id != config.ADMIN_USER_ID:
             embed = discord.Embed(
                 title="❌ Access Denied",
@@ -395,6 +400,7 @@ class AdminCog(commands.Cog):
             color=0x00FF88,
         )
         await ctx.followup.send(embed=embed)
+
 
 def setup(bot: discord.Bot):
     bot.add_cog(AdminCog(bot))

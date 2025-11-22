@@ -131,7 +131,10 @@ class AutomaticResponsesCog(commands.Cog):
         if not self.automatic_responses:
             return
 
-        if message.channel.category_id in config.IGNORED_CATEGORIES:
+        if (
+            isinstance(message.channel, (discord.TextChannel, discord.Thread))
+            and message.channel.category_id in config.IGNORED_CATEGORIES
+        ):
             return
 
         message_content = message.content.lower()
