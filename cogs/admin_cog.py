@@ -257,7 +257,11 @@ class AdminCog(commands.Cog):
     async def snippet(
         self,
         ctx: discord.ApplicationContext,
-        name: discord.Option(str, description="Name of the snippet to send", autocomplete=discord.utils.basic_autocomplete(get_snippets_list)),  # type: ignore
+        name: discord.Option(
+            str,
+            description="Name of the snippet to send",
+            autocomplete=discord.utils.basic_autocomplete(get_snippets_list),
+        ), # type: ignore
     ):
         if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
             embed = discord.Embed(
@@ -391,15 +395,106 @@ class AdminCog(commands.Cog):
             await ctx.respond(embed=embed, ephemeral=True)
             return
 
-        await ctx.defer()
-        for channel in category.channels:
-            await channel.delete()
-        embed = discord.Embed(
-            title="✅ Channels Deleted",
-            description=f"All channels in {category.name} have been deleted.",
-            color=0x00FF88,
+        if not category.channels:
+            embed = discord.Embed(
+                title="ℹ️ No Channels Found",
+                description=f"There are no channels in {category.name} to delete.",
+                color=0x00AA00,
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+
+        class ConfirmDeleteView(discord.ui.View):
+            def __init__(self, *, timeout: float | None = 60):
+                super().__init__(timeout=timeout)
+                self._confirmed = False
+
+            async def interaction_check(self, interaction: discord.Interaction) -> bool:
+                if interaction.user is None or interaction.user.id != ctx.author.id:
+                    await interaction.response.send_message(
+                        "You cannot interact with this confirmation.",
+                        ephemeral=True,
+                    )
+                    return False
+                return True
+
+            @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger)
+            async def confirm(
+                self, button: discord.ui.Button, interaction: discord.Interaction
+            ):
+                await interaction.response.defer(ephemeral=True)
+                deleted_count = 0
+                for ch in list(category.channels):
+                    try:
+                        await ch.delete()
+                        deleted_count += 1
+                    except Exception as e:
+                        logger.error(f"Failed to delete channel {ch.id}: {e}")
+
+                for child in self.children:
+                    try:
+                        setattr(child, "disabled", True)
+                    except Exception:
+                        pass
+                if interaction.message is not None:
+                    try:
+                        await interaction.message.edit(view=self)
+                    except Exception:
+                        pass
+
+                embed = discord.Embed(
+                    title="✅ Channels Deleted",
+                    description=f"Deleted {deleted_count} channel(s) in {category.name}.",
+                    color=0x00FF88,
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                self._confirmed = True
+                logger.info(
+                    f"User {ctx.author.id} confirmed deletion of {deleted_count} channels in category {category.id}"
+                )
+                self.stop()
+
+            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+            async def cancel(
+                self, button: discord.ui.Button, interaction: discord.Interaction
+            ):
+                for child in self.children:
+                    try:
+                        setattr(child, "disabled", True)
+                    except Exception:
+                        pass
+                if interaction.message is not None:
+                    try:
+                        await interaction.message.edit(view=self)
+                    except Exception:
+                        pass
+                await interaction.response.send_message(
+                    "Deletion cancelled.", ephemeral=True
+                )
+                logger.info(
+                    f"User {ctx.author.id} cancelled deletion of channels in category {category.id}"
+                )
+                self.stop()
+
+        confirm_embed = discord.Embed(
+            title="⚠️ Confirm Channel Deletion",
+            description=(
+                f"Are you sure you want to delete all channels under **{category.name}**?"
+                f"\nThis action cannot be undone. {len(category.channels)} channel(s) will be removed."
+            ),
+            color=0xFF8800,
         )
-        await ctx.followup.send(embed=embed)
+
+        view = ConfirmDeleteView(timeout=60)
+        await ctx.respond(embed=confirm_embed, view=view, ephemeral=True)
+        await view.wait()
+        if not view._confirmed:
+            try:
+                await ctx.followup.send(
+                    "No confirmation received. Deletion cancelled.", ephemeral=True
+                )
+            except Exception:
+                pass
 
 
 def setup(bot: discord.Bot):
