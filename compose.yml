@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  collapsebot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: collapsebot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./automatic_responses.yml:/app/automatic_responses.yml:ro
+      - ./snippets.yml:/app/snippets.yml:ro
+    networks:
+      - collapsebot_network
+
+networks:
+  collapsebot_network:
+    driver: bridge
