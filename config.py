@@ -32,7 +32,7 @@ def _fetch_clients_from_api(endpoint: str) -> list:
     """Helper function to fetch clients from API."""
     try:
         response = requests.get(
-            f"{API_BASE_URL}/{endpoint}",
+            f"{API_BASE_URL}/api/v1/{endpoint}",
             headers={"User-Agent": "CollapseBot"},
             timeout=10
         )
