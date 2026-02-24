@@ -1,5 +1,7 @@
 import time
+from dataclasses import dataclass
 from datetime import datetime
+from typing import List, Optional
 
 import discord
 import requests
@@ -10,71 +12,169 @@ import config
 from utils.helpers import get_emoji, get_uptime_string
 
 
+@dataclass
+class Client:
+    """Client data structure matching API response."""
+    id: int
+    name: str
+    version: str
+    filename: str
+    md5_hash: str
+    size: int
+    main_class: str
+    show: bool
+    working: bool
+    launches: int
+    downloads: int
+    client_type: str
+    created_at: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Client":
+        """Create Client instance from dictionary."""
+        return cls(
+            id=data.get("id", 0),
+            name=data.get("name", ""),
+            version=data.get("version", ""),
+            filename=data.get("filename", ""),
+            md5_hash=data.get("md5_hash", ""),
+            size=data.get("size", 0),
+            main_class=data.get("main_class", ""),
+            show=data.get("show", False),
+            working=data.get("working", False),
+            launches=data.get("launches", 0),
+            downloads=data.get("downloads", 0),
+            client_type=data.get("client_type", "default"),
+            created_at=data.get("created_at", ""),
+        )
+
+
 class InfoCog(commands.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
 
-    @commands.slash_command(name="clients", description="Get list of clients")
-    async def clients(self, ctx: discord.ApplicationContext):
-        logger.debug(f"clients command executed")
-
-        await ctx.defer()
-
+    def _fetch_clients(self, endpoint: str = "clients") -> Optional[List[Client]]:
+        """Fetch and parse clients from the API endpoint."""
         try:
-            clients = requests.get(
-                f"{config.API_BASE_URL}/clients",
+            response = requests.get(
+                f"{config.API_BASE_URL}/{endpoint}",
                 headers={"User-Agent": "CollapseBot"},
                 timeout=10,
-            ).json()
-
-            embed = discord.Embed(
-                title=f"{get_emoji('clients', 1292469727125438575)} Client Library",
-                color=0x5865F2,
-                description=f"📊 **{len(clients)}** clients available",
             )
+            response.raise_for_status()
+            data = response.json()
+            
+            if isinstance(data, dict) and "data" in data:
+                clients_data = data["data"]
+            elif isinstance(data, list):
+                clients_data = data
+            else:
+                logger.error(f"Unexpected API response format: {type(data)}")
+                return None
+            
+            return [Client.from_dict(client) for client in clients_data]
+        except requests.RequestException as e:
+            logger.error(f"Failed to fetch clients from {endpoint}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error parsing client data: {e}")
+            return None
 
-            if clients:
-                regular_list = "\n".join(
-                    [
-                        f"{'🔒' if not client['show'] else '🟢'} **{client['name']}** `{client['version']}`"
-                        for client in clients
-                    ]
-                )
-                embed.add_field(
-                    name="Clients",
-                    value=(
-                        regular_list[:1024]
-                        if len(regular_list) <= 1024
-                        else regular_list[:1021] + "..."
-                    ),
-                    inline=False,
-                )
+    def _create_clients_embed(self, clients: List[Client], title: str, emoji: str = "clients") -> discord.Embed:
+        """Create an embed for displaying clients list."""
+        embed = discord.Embed(
+            title=f"{get_emoji(emoji, 1292469727125438575)} {title}",
+            color=0x5865F2,
+            description=f"📊 **{len(clients)}** clients available",
+        )
 
+        if clients:
+            regular_list = "\n".join(
+                [
+                    f"{'🔒' if not client.show else '🟢'} **{client.name}** `{client.version}`"
+                    for client in clients
+                ]
+            )
             embed.add_field(
-                name="📝 Legend",
-                value="🟢 Public • 🔒 Hidden",
+                name="Clients",
+                value=(
+                    regular_list[:1024]
+                    if len(regular_list) <= 1024
+                    else regular_list[:1021] + "..."
+                ),
                 inline=False,
             )
 
-            embed.set_footer(
-                text=f"CollapseLoader • {len(clients)} total clients",
-                icon_url=(
-                    self.bot.user.avatar.url
-                    if self.bot.user and self.bot.user.avatar
-                    else None
-                ),
-            )
+        embed.add_field(
+            name="📝 Legend",
+            value="🟢 Public • 🔒 Hidden",
+            inline=False,
+        )
 
-            await ctx.followup.send(embed=embed)
+        embed.set_footer(
+            text=f"CollapseLoader • {len(clients)} total clients",
+            icon_url=(
+                self.bot.user.avatar.url
+                if self.bot.user and self.bot.user.avatar
+                else None
+            ),
+        )
 
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch clients: {e}")
+        return embed
+
+    @commands.slash_command(name="clients", description="Get list of all clients")
+    async def clients(self, ctx: discord.ApplicationContext):
+        logger.debug(f"clients command executed")
+        await ctx.defer()
+
+        clients = self._fetch_clients("clients")
+        if clients is None:
             error_embed = discord.Embed(
                 title="❌ Error",
                 description="Failed to fetch client data. Please try again later.",
                 color=0xFF4444,
             )
             await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        embed = self._create_clients_embed(clients, "Client Library")
+        await ctx.followup.send(embed=embed)
+
+    @commands.slash_command(name="fabric-clients", description="Get list of Fabric clients")
+    async def fabric_clients(self, ctx: discord.ApplicationContext):
+        logger.debug(f"fabric-clients command executed")
+        await ctx.defer()
+
+        clients = self._fetch_clients("fabric-clients")
+        if clients is None:
+            error_embed = discord.Embed(
+                title="❌ Error",
+                description="Failed to fetch Fabric client data. Please try again later.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        embed = self._create_clients_embed(clients, "Fabric Client Library", "clients")
+        await ctx.followup.send(embed=embed)
+
+    @commands.slash_command(name="forge-clients", description="Get list of Forge clients")
+    async def forge_clients(self, ctx: discord.ApplicationContext):
+        logger.debug(f"forge-clients command executed")
+        await ctx.defer()
+
+        clients = self._fetch_clients("forge-clients")
+        if clients is None:
+            error_embed = discord.Embed(
+                title="❌ Error",
+                description="Failed to fetch Forge client data. Please try again later.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        embed = self._create_clients_embed(clients, "Forge Client Library", "clients")
+        await ctx.followup.send(embed=embed)
 
     def get_clients(self):
         """Fetch the list of clients from the API."""
@@ -84,106 +184,115 @@ class InfoCog(commands.Cog):
     async def client_cmd(
         self,
         ctx: discord.ApplicationContext,
-        client: discord.Option(str, description="Client to get information about", autocomplete=discord.utils.basic_autocomplete(get_clients)),  # type: ignore
+        client: discord.Option(str, description="Client to get information about", autocomplete=discord.utils.basic_autocomplete(get_clients)), # type: ignore
     ):
         logger.debug(f"client command executed")
-
         await ctx.defer()
 
-        try:
-            clients = requests.get(
-                f"{config.API_BASE_URL}/clients",
-                headers={"User-Agent": "CollapseBot"},
-                timeout=10,
-            ).json()
-
-            found_client = next(
-                (
-                    c
-                    for c in clients
-                    if client.lower() in c["name"].lower()
-                    or client.lower() in c["filename"].lower()
-                ),
-                None,
-            )
-
-            if found_client:
-                embed = discord.Embed(
-                    title=found_client["name"],
-                    color=0x00FF88 if found_client.get("working", False) else 0xFF4444,
-                    description=f"{'✅ Working' if found_client.get('working', False) else '❌ Not Working'}",
-                )
-
-                embed.add_field(
-                    name=f"{get_emoji('version', 1306166191177469952)} Version",
-                    value=f"`{found_client['version']}`",
-                    inline=True,
-                )
-
-                embed.add_field(
-                    name=f"{get_emoji('file', 1306166288649027584)} Filename",
-                    value=f"`{found_client['filename']}`",
-                    inline=True,
-                )
-
-                embed.add_field(
-                    name=f"{get_emoji('main_class', 1306166348757598228)} Main Class",
-                    value=f"`{found_client['main_class']}`",
-                    inline=False,
-                )
-
-                status_indicators = []
-
-                if found_client.get("working"):
-                    status_indicators.append("✅ Working")
-                if found_client.get("show"):
-                    status_indicators.append("👁️ Public")
-
-                if status_indicators:
-                    embed.add_field(
-                        name="📊 Status",
-                        value=" • ".join(status_indicators),
-                        inline=False,
-                    )
-
-                try:
-                    created_at = datetime.strptime(
-                        found_client["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                    )
-                except ValueError:
-                    created_at = datetime.fromisoformat(
-                        found_client["created_at"].replace("Z", "+00:00")
-                    )
-
-                embed.add_field(
-                    name=f"{get_emoji('timeline', 1292468817234104401)} Created",
-                    value=f"<t:{int(created_at.timestamp())}:R>",
-                    inline=True,
-                )
-
-                embed.set_footer(
-                    text="CollapseLoader Client Info",
-                    icon_url=(
-                        self.bot.user.avatar.url
-                        if self.bot.user and self.bot.user.avatar
-                        else None
-                    ),
-                )
-
-                await ctx.followup.send(embed=embed)
-            else:
-                error_embed = discord.Embed(
-                    title="❌ Client Not Found",
-                    description=f"No client found matching `{client}`\n\nUse `/clients` to see all available clients.",
-                    color=0xFF4444,
-                )
-                await ctx.followup.send(embed=error_embed, ephemeral=True)
-
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch client data: {e}")
+        clients = self._fetch_clients("clients")
+        if clients is None:
             error_embed = discord.Embed(
                 title="❌ Network Error",
                 description="Failed to fetch client data. Please try again later.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        found_client = next(
+            (
+                c
+                for c in clients
+                if client.lower() in c.name.lower()
+                or client.lower() in c.filename.lower()
+            ),
+            None,
+        )
+
+        if found_client:
+            embed = discord.Embed(
+                title=found_client.name,
+                color=0x00FF88 if found_client.working else 0xFF4444,
+                description=f"{'✅ Working' if found_client.working else '❌ Not Working'}",
+            )
+
+            embed.add_field(
+                name=f"{get_emoji('version', 1306166191177469952)} Version",
+                value=f"`{found_client.version}`",
+                inline=True,
+            )
+
+            embed.add_field(
+                name=f"{get_emoji('file', 1306166288649027584)} Filename",
+                value=f"`{found_client.filename}`",
+                inline=True,
+            )
+
+            embed.add_field(
+                name=f"{get_emoji('main_class', 1306166348757598228)} Main Class",
+                value=f"`{found_client.main_class}`",
+                inline=False,
+            )
+
+            status_indicators = []
+            if found_client.working:
+                status_indicators.append("✅ Working")
+            if found_client.show:
+                status_indicators.append("👁️ Public")
+
+            if status_indicators:
+                embed.add_field(
+                    name="📊 Status",
+                    value=" • ".join(status_indicators),
+                    inline=False,
+                )
+
+            type_emoji = {
+                "fabric": "🧵",
+                "forge": "🔨",
+                "default": "📦"
+            }
+            embed.add_field(
+                name="📦 Client Type",
+                value=f"{type_emoji.get(found_client.client_type, '📦')} {found_client.client_type.title()}",
+                inline=True,
+            )
+
+            embed.add_field(
+                name="📊 Statistics",
+                value=f"⬇️ **{found_client.downloads:,}** downloads\n🚀 **{found_client.launches:,}** launches",
+                inline=True,
+            )
+
+            try:
+                created_at = datetime.strptime(
+                    found_client.created_at, "%Y-%m-%dT%H:%M:%S.%fZ"
+                )
+            except ValueError:
+                created_at = datetime.fromisoformat(
+                    found_client.created_at.replace("Z", "+00:00")
+                )
+
+            embed.add_field(
+                name=f"{get_emoji('timeline', 1292468817234104401)} Created",
+                value=f"<t:{int(created_at.timestamp())}:R>",
+                inline=True,
+            )
+
+            embed.set_footer(
+                text="CollapseLoader Client Info",
+                icon_url=(
+                    self.bot.user.avatar.url
+                    if self.bot.user and self.bot.user.avatar
+                    else None
+                ),
+            )
+
+            await ctx.followup.send(embed=embed)
+        else:
+            error_embed = discord.Embed(
+                title="❌ Client Not Found",
+                description=f"No client found matching `{client}`\n\nUse `/clients` to see all available clients.",
                 color=0xFF4444,
             )
             await ctx.followup.send(embed=error_embed, ephemeral=True)
