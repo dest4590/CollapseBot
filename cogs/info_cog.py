@@ -57,7 +57,7 @@ class InfoCog(commands.Cog):
         """Fetch and parse clients from the API endpoint."""
         try:
             response = requests.get(
-                f"{config.API_BASE_URL}/{endpoint}",
+                f"{config.API_BASE_URL}/api/v1/{endpoint}",
                 headers={"User-Agent": "CollapseBot"},
                 timeout=10,
             )
