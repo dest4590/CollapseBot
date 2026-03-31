@@ -12,9 +12,3 @@ services:
     volumes:
       - ./automatic_responses.yml:/app/automatic_responses.yml:ro
       - ./snippets.yml:/app/snippets.yml:ro
-    networks:
-      - collapsebot_network
-
-networks:
-  collapsebot_network:
-    driver: bridge
