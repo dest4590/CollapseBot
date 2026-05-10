@@ -5,8 +5,8 @@ loader_download:
         - ссылка на лоадер
         - ссылка для скачивания
     responses:
-        - 'Скачать лоадер можно здесь: https://collapseloader.org'
-        - 'Официальная ссылка для скачивания: https://collapseloader.org'
+        - 'Скачать лоадер можно здесь: https://collapseloader.pages.dev'
+        - 'Официальная ссылка для скачивания: https://collapseloader.pages.dev'
     conditions:
         channel_types: ['any']
         cooldown: 60

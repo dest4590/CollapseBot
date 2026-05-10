@@ -23,7 +23,7 @@ IGNORED_CATEGORIES = [
     1348431299290857552,
 ]
 
-API_BASE_URL = "https://atlas.collapseloader.org"
+API_BASE_URL = "https://atlas.collapseloader.pages.dev"
 CLIENTS = []
 FABRIC_CLIENTS = []
 FORGE_CLIENTS = []

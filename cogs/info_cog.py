@@ -388,7 +388,7 @@ class InfoCog(commands.Cog):
             name="📱 Social Platforms",
             value="📱 [Telegram](https://t.me/collapseloader)\n"
             "💬 [Discord](https://discord.com/invite/FyKtnFqs6J)\n"
-            "🌐 [Website](https://collapseloader.org)",
+            "🌐 [Website](https://collapseloader.pages.dev)",
             inline=False,
         )
 
