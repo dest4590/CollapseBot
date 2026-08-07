@@ -56,11 +56,15 @@ class InfoCog(commands.Cog):
     def _fetch_clients(self, endpoint: str = "clients") -> Optional[List[Client]]:
         """Fetch and parse clients from the API endpoint."""
         try:
-            response = requests.get(
-                f"{config.API_BASE_URL}/api/v1/{endpoint}",
-                headers={"User-Agent": "CollapseBot"},
-                timeout=10,
-            )
+            hf_urls = {
+                "clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/blob/main/static/clients.json",
+                "fabric-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/blob/main/static/fabric-clients.json",
+                "forge-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/blob/main/static/forge-clients.json",
+            }
+
+            url = hf_urls.get(endpoint, f"{config.API_BASE_URL}/api/v1/{endpoint}")
+
+            response = requests.get(url, headers={"User-Agent": "CollapseBot"}, timeout=10)
             response.raise_for_status()
             data = response.json()
             

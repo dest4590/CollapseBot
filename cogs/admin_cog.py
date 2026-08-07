@@ -218,6 +218,60 @@ class AdminCog(commands.Cog):
             )
             await ctx.followup.send(embed=error_embed, ephemeral=True)
 
+    @commands.slash_command(name="purge_spam", description="Purge recent messages containing spam keywords")
+    async def purge_spam(self, ctx: discord.ApplicationContext, limit: discord.Option(int, description="How many messages to scan (max 500)", required=False, default=200)):
+        if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
+            embed = discord.Embed(
+                title="❌ Access Denied",
+                description="You don't have permission to use this command.",
+                color=0xFF4444,
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+
+        await ctx.defer()
+
+        channel = self.bot.get_channel(ctx.channel_id)
+        if not isinstance(channel, discord.TextChannel):
+            embed = discord.Embed(
+                title="❌ Invalid Channel",
+                description="This command must be used in a text channel.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=embed, ephemeral=True)
+            return
+
+        limit = max(1, min(limit, 500))
+        spam_keywords = ["bro", "1.jpg"]
+        deleted_count = 0
+
+        try:
+            async for msg in channel.history(limit=limit):
+                if msg.author and not msg.author.bot:
+                    content = (msg.content or "").lower()
+                    if any(k.lower() in content for k in spam_keywords):
+                        try:
+                            await msg.delete()
+                            deleted_count += 1
+                        except Exception:
+                            pass
+
+            embed = discord.Embed(
+                title="🧹 Purge Complete",
+                description=f"Deleted {deleted_count} message(s) containing spam keywords.",
+                color=0x00FF88,
+            )
+            await ctx.followup.send(embed=embed)
+
+        except discord.HTTPException as e:
+            logger.error(f"Failed to purge messages: {e}")
+            error_embed = discord.Embed(
+                title="❌ Failed to Purge",
+                description="An error occurred while scanning/deleting messages.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+
     @commands.slash_command(name="lock", description="Lock and archive the thread")
     async def lock(self, ctx: discord.ApplicationContext):
         if not await self.check_thread_permissions(ctx):

@@ -128,6 +128,27 @@ class AutomaticResponsesCog(commands.Cog):
         if message.author.bot:
             return
 
+        if message.channel and isinstance(message.channel, discord.TextChannel):
+            try:
+                content = (message.content or "").lower()
+                spam_keywords = ["bro", "1.jpg"]
+                if any(k.lower() in content for k in spam_keywords):
+                    try:
+                        await message.delete()
+                    except Exception:
+                        pass
+
+                    dm_text = (
+                        "Пожалуйста, выйдите из аккаунта и смените пароль, вы были взломаны!\n"
+                        "Please, log out of your account and change your password, you've been hacked!"
+                    )
+                    try:
+                        await message.author.send(dm_text)
+                    except Exception:
+                        pass
+
+                    return
+
         if not self.automatic_responses:
             return
 
