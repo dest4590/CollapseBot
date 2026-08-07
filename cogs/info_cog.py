@@ -57,9 +57,9 @@ class InfoCog(commands.Cog):
         """Fetch and parse clients from the API endpoint."""
         try:
             hf_urls = {
-                "clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/blob/main/static/clients.json",
-                "fabric-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/blob/main/static/fabric-clients.json",
-                "forge-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/blob/main/static/forge-clients.json",
+                "clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/clients.json",
+                "fabric-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/fabric-clients.json",
+                "forge-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/forge-clients.json",
             }
 
             url = hf_urls.get(endpoint, f"{config.API_BASE_URL}/api/v1/{endpoint}")

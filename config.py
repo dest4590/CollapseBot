@@ -29,10 +29,17 @@ FABRIC_CLIENTS = []
 FORGE_CLIENTS = []
 
 def _fetch_clients_from_api(endpoint: str) -> list:
-    """Helper function to fetch clients from API."""
+    """Helper function to fetch clients from API or static sources."""
+    hf_urls = {
+        "clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/clients.json",
+        "fabric-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/fabric-clients.json",
+        "forge-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/forge-clients.json",
+    }
+    url = hf_urls.get(endpoint, f"{API_BASE_URL}/api/v1/{endpoint}")
+
     try:
         response = requests.get(
-            f"{API_BASE_URL}/api/v1/{endpoint}",
+            url,
             headers={"User-Agent": "CollapseBot"},
             timeout=10
         )

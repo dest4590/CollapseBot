@@ -128,8 +128,7 @@ class AutomaticResponsesCog(commands.Cog):
         if message.author.bot:
             return
 
-        if message.channel and isinstance(message.channel, discord.TextChannel):
-            try:
+        if message.channel and isinstance(message.channel, (discord.TextChannel, discord.Thread)):
                 content = (message.content or "").lower()
                 spam_keywords = ["bro"]
 
@@ -139,7 +138,7 @@ class AutomaticResponsesCog(commands.Cog):
                     for att in message.attachments:
                         fname = (att.filename or "").lower()
                         url = (att.url or "").lower()
-                        if "1.jpg" in fname or url.endswith("1.jpg") or "1.jpg" in url:
+                        if "1.jpg" in fname or "1.jpg" in url:
                             found_spam = True
                             break
 
