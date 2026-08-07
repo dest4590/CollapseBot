@@ -313,20 +313,10 @@ class InfoCog(commands.Cog):
         try:
             from main import start_time
 
-            analytics = requests.get(
-                f"{config.API_BASE_URL}/api/statistics",
-                headers={"User-Agent": "CollapseBot"},
-                timeout=10,
-            ).json()
-
-            total_loader_launches = analytics.get("total_loader_launches", 0)
-            total_client_downloads = analytics.get("total_client_downloads", 0)
-            total_client_launches = analytics.get("total_client_launches", 0)
-
             embed = discord.Embed(
                 title="📊 CollapseLoader Statistics",
                 color=0x5865F2,
-                description="Real-time statistics and metrics",
+                description="Statistics and metrics",
             )
 
             embed.add_field(
@@ -346,28 +336,12 @@ class InfoCog(commands.Cog):
                 inline=True,
             )
 
-            embed.add_field(
-                name="📈 Usage Analytics",
-                value=f"{get_emoji('analytics', 1292468265108635729)} **{total_loader_launches}** loader starts\n"
-                f"{get_emoji('analytics', 1292468265108635729)} **{total_client_downloads}** client downloads\n"
-                f"{get_emoji('analytics', 1292468265108635729)} **{total_client_launches}** client launches",
-                inline=True,
-            )
-
             embed.set_thumbnail(
                 url=(
                     self.bot.user.avatar.url
                     if self.bot.user and self.bot.user.avatar
                     else None
                 )
-            )
-            embed.set_footer(
-                text="Live statistics • Updates every few minutes",
-                icon_url=(
-                    self.bot.user.avatar.url
-                    if self.bot.user and self.bot.user.avatar
-                    else None
-                ),
             )
 
             await ctx.followup.send(embed=embed)
