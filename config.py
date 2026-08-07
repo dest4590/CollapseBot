@@ -23,19 +23,21 @@ IGNORED_CATEGORIES = [
     1348431299290857552,
 ]
 
-API_BASE_URL = "https://atlas.collapseloader.pages.dev"
 CLIENTS = []
 FABRIC_CLIENTS = []
 FORGE_CLIENTS = []
 
 def _fetch_clients_from_api(endpoint: str) -> list:
-    """Helper function to fetch clients from API or static sources."""
+    """Helper function to fetch clients from only Hugging Face static JSON sources."""
     hf_urls = {
         "clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/clients.json",
         "fabric-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/fabric-clients.json",
         "forge-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/forge-clients.json",
     }
-    url = hf_urls.get(endpoint, f"{API_BASE_URL}/api/v1/{endpoint}")
+    url = hf_urls.get(endpoint)
+    if not url:
+        logger.error(f"No data source configured for endpoint: {endpoint}")
+        return []
 
     try:
         response = requests.get(

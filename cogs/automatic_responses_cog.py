@@ -158,7 +158,14 @@ class AutomaticResponsesCog(commands.Cog):
 
                     dm_text = (
                         "Пожалуйста, выйдите из аккаунта и смените пароль, вас взломали!\n"
+                        "Старайтесь не скачивать \"бесплатные читы, клиенты, лаунчеры\", в следующий раз будьте внимательнее.\n"
+                        "С благодарностью, администрация CollapseLoader.\n"
+
+                        "---\n"
+
                         "Please log out of your account and change your password, you've been hacked!\n"
+                        "Try not to download \"free cheats, clients, launchers\", next time be more careful.\n"
+                        "With gratitude, the CollapseLoader administration."
                     )
                     dm_sent = False
                     try:

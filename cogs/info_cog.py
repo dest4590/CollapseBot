@@ -62,7 +62,10 @@ class InfoCog(commands.Cog):
                 "forge-clients": "https://huggingface.co/datasets/Collapsecdn/collapsecdn/resolve/main/static/forge-clients.json",
             }
 
-            url = hf_urls.get(endpoint, f"{config.API_BASE_URL}/api/v1/{endpoint}")
+            url = hf_urls.get(endpoint)
+            if not url:
+                logger.error(f"No data source configured for endpoint: {endpoint}")
+                return None
 
             response = requests.get(url, headers={"User-Agent": "CollapseBot"}, timeout=10)
             response.raise_for_status()
