@@ -131,21 +131,48 @@ class AutomaticResponsesCog(commands.Cog):
         if message.channel and isinstance(message.channel, discord.TextChannel):
             try:
                 content = (message.content or "").lower()
-                spam_keywords = ["bro", "1.jpg"]
-                if any(k.lower() in content for k in spam_keywords):
+                spam_keywords = ["bro"]
+
+                found_spam = any(k in content for k in spam_keywords)
+
+                if not found_spam and getattr(message, "attachments", None):
+                    for att in message.attachments:
+                        fname = (att.filename or "").lower()
+                        url = (att.url or "").lower()
+                        if "1.jpg" in fname or url.endswith("1.jpg") or "1.jpg" in url:
+                            found_spam = True
+                            break
+
+                if not found_spam and getattr(message, "embeds", None):
+                    for e in message.embeds:
+                        img = getattr(e, "image", None)
+                        if img and getattr(img, "url", None):
+                            if "1.jpg" in img.url.lower():
+                                found_spam = True
+                                break
+
+                if found_spam:
                     try:
                         await message.delete()
                     except Exception:
                         pass
 
                     dm_text = (
-                        "Пожалуйста, выйдите из аккаунта и смените пароль, вы были взломаны!\n"
-                        "Please, log out of your account and change your password, you've been hacked!"
+                        "Пожалуйста, выйдите из аккаунта и смените пароль, вас взломали!\n"
+                        "Please log out of your account and change your password, you've been hacked!\n"
                     )
+                    dm_sent = False
                     try:
                         await message.author.send(dm_text)
+                        dm_sent = True
                     except Exception:
-                        pass
+                        dm_sent = False
+
+                    if not dm_sent:
+                        try:
+                            await message.channel.send(f"{message.author.mention} {dm_text}")
+                        except Exception:
+                            pass
 
                     return
 
