@@ -1,5 +1,6 @@
+import re
 from datetime import datetime
-from typing import cast
+from typing import Optional, cast, Tuple
 
 import discord
 import yaml
@@ -18,6 +19,23 @@ def get_snippets_list(_):
             return list(snippets.keys())
     except:
         return []
+
+
+def _parse_message_link(value: str) -> Tuple[Optional[int], Optional[int]]:
+    """Parse a message link/ID into (channel_id, message_id).
+
+    Accepts a raw snowflake ID or a Discord message URL:
+    https://discord.com/channels/<guild>/<channel>/<message>
+    """
+    value = (value or "").strip()
+    if not value:
+        return None, None
+    if value.isdigit():
+        return None, int(value)
+    match = re.search(r"/channels/(?:\d+/)?(\d+)/(\d+)", value)
+    if match:
+        return int(match.group(1)), int(match.group(2))
+    return None, None
 
 
 class AdminCog(commands.Cog):
@@ -219,7 +237,11 @@ class AdminCog(commands.Cog):
             await ctx.followup.send(embed=error_embed, ephemeral=True)
 
     @commands.slash_command(name="purge_spam", description="Purge recent messages containing spam keywords")
-    async def purge_spam(self, ctx: discord.ApplicationContext, limit: discord.Option(int, description="How many messages to scan (max 500)", required=False, default=200)):
+    async def purge_spam(self, ctx: discord.ApplicationContext, 
+                         limit: discord.Option(int, 
+                                               description="How many messages to scan (max 500)", 
+                                               required=False, 
+                                               default=200)): # type: ignore
         if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
             embed = discord.Embed(
                 title="❌ Access Denied",
@@ -271,6 +293,128 @@ class AdminCog(commands.Cog):
                 color=0xFF4444,
             )
             await ctx.followup.send(embed=error_embed, ephemeral=True)
+
+    @commands.slash_command(
+        name="hackwarn",
+        description="Delete a message and DM its author with a warning (admin only)",
+    )
+    async def hackwarn(
+        self,
+        ctx: discord.ApplicationContext,
+        message_link: discord.Option(
+            str,
+            description="Message link or ID of the target message",
+            required=False,
+            default="",
+        ), # type: ignore
+    ):
+        """Admin only: delete the target message and DM its author with a warning."""
+        if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
+            embed = discord.Embed(
+                title="❌ Access Denied",
+                description="You don't have permission to use this command.",
+                color=0xFF4444,
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+
+        await ctx.defer(ephemeral=True)
+
+        channel_id_from_link, msg_id = _parse_message_link(message_link)
+        if msg_id is None:
+            error_embed = discord.Embed(
+                title="❌ Missing Message",
+                description=(
+                    "Please provide a message link or ID.\n"
+                    "**Tip:** enable Developer Mode (Settings → Advanced), then "
+                    "right-click a message → **Copy Message Link**."
+                ),
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        target_channel = None
+        if channel_id_from_link:
+            target_channel = self.bot.get_channel(channel_id_from_link)
+        if target_channel is None:
+            target_channel = self.bot.get_channel(ctx.channel_id)
+
+        if not isinstance(target_channel, discord.TextChannel):
+            error_embed = discord.Embed(
+                title="❌ Invalid Channel",
+                description="Could not resolve the channel for this message.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        try:
+            message = await target_channel.fetch_message(msg_id)
+        except discord.HTTPException as e:
+            logger.error(f"Failed to fetch message {msg_id}: {e}")
+            error_embed = discord.Embed(
+                title="❌ Message Not Found",
+                description="Could not find the message. It may have already been deleted.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        target = message.author
+
+        if target.bot:
+            error_embed = discord.Embed(
+                title="❌ Cannot Warn Bot",
+                description="This command can only be used on user messages.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        try:
+            await message.delete()
+        except discord.HTTPException as e:
+            logger.error(f"Failed to delete message: {e}")
+            error_embed = discord.Embed(
+                title="❌ Failed to Delete Message",
+                description="An error occurred while deleting the message.",
+                color=0xFF4444,
+            )
+            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            return
+
+        dm_text = (
+            "Пожалуйста, выйдите из аккаунта и смените пароль, вас взломали!\n"
+            "Старайтесь не скачивать \"бесплатные читы, клиенты, лаунчеры\", в следующий раз будьте внимательнее.\n"
+            "С благодарностью, администрация CollapseLoader.\n"
+
+            "---\n"
+
+            "Please log out of your account and change your password, you've been hacked!\n"
+            "Try not to download \"free cheats, clients, launchers\", next time be more careful.\n"
+            "With gratitude, the CollapseLoader administration."
+        )
+
+        dm_sent = False
+        try:
+            await target.send(dm_text)
+            dm_sent = True
+        except Exception:
+            dm_sent = False
+
+        embed = discord.Embed(
+            title="✅ Message Deleted",
+            description=f"Message from {target.mention} was deleted.",
+            color=0x00FF88,
+        )
+        embed.add_field(
+            name="✉️ DM",
+            value="Warning sent via DM." if dm_sent else "⚠️ Could not send DM.",
+            inline=False,
+        )
+        embed.add_field(name="👤 Triggered by", value=ctx.author.mention, inline=True)
+        await ctx.followup.send(embed=embed, ephemeral=True)
 
     @commands.slash_command(name="lock", description="Lock and archive the thread")
     async def lock(self, ctx: discord.ApplicationContext):
