@@ -7,8 +7,8 @@ import yaml
 from discord.ext import commands
 from loguru import logger
 
-import config
-from utils.helpers import is_staff
+from utils.hackwarn import apply_hack_warn
+from utils.helpers import error_embed, make_embed, require_admin, require_staff
 
 
 def get_snippets_list(_):
@@ -59,31 +59,20 @@ class AdminCog(commands.Cog):
 
     async def check_thread_permissions(self, ctx: discord.ApplicationContext) -> bool:
         """Check if user has permissions and command is in a thread"""
-        if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
-            error_embed = discord.Embed(
-                title="❌ Access Denied",
-                description="You don't have permission to use this command.",
-                color=0xFF4444,
-            )
-            error_embed.add_field(
-                name="Required Permissions", value="Staff role required", inline=False
-            )
-            await ctx.respond(embed=error_embed, ephemeral=True)
+        if not await require_staff(ctx):
             return False
 
         channel = self.bot.get_channel(ctx.channel_id)
         if not isinstance(channel, discord.Thread):
-            error_embed = discord.Embed(
-                title="❌ Invalid Channel",
-                description="This command can only be used in forum threads.",
-                color=0xFF4444,
+            embed = error_embed(
+                "Invalid Channel", "This command can only be used in forum threads."
             )
-            error_embed.add_field(
+            embed.add_field(
                 name="💡 Tip",
                 value="Navigate to a forum thread to use this command.",
                 inline=False,
             )
-            await ctx.respond(embed=error_embed, ephemeral=True)
+            await ctx.respond(embed=embed, ephemeral=True)
             return False
 
         return True
@@ -129,17 +118,15 @@ class AdminCog(commands.Cog):
 
         except discord.HTTPException as e:
             logger.error(f"Failed to close thread: {e}")
-            error_embed = discord.Embed(
-                title="❌ Failed to Close Thread",
-                description="An error occurred while closing the thread.",
-                color=0xFF4444,
+            embed = error_embed(
+                "Failed to Close Thread", "An error occurred while closing the thread."
             )
-            error_embed.add_field(
+            embed.add_field(
                 name="Possible Issues",
                 value="• Missing bot permissions\n• Thread already locked\n• Discord API error",
                 inline=False,
             )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            await ctx.followup.send(embed=embed, ephemeral=True)
 
     @commands.slash_command(name="fixed", description="Mark forum thread as fixed")
     async def fixed(self, ctx: discord.ApplicationContext):
@@ -186,12 +173,8 @@ class AdminCog(commands.Cog):
 
         except discord.HTTPException as e:
             logger.error(f"Failed to mark thread as fixed: {e}")
-            error_embed = discord.Embed(
-                title="❌ Failed to Update Thread",
-                description="Unable to mark thread as fixed.",
-                color=0xFF4444,
-            )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            embed = error_embed("Failed to Update Thread", "Unable to mark thread as fixed.")
+            await ctx.followup.send(embed=embed, ephemeral=True)
 
     @commands.slash_command(name="added", description="Mark forum thread as added")
     async def add(self, ctx: discord.ApplicationContext):
@@ -229,12 +212,8 @@ class AdminCog(commands.Cog):
 
         except discord.HTTPException as e:
             logger.error(f"Failed to mark thread as added: {e}")
-            error_embed = discord.Embed(
-                title="❌ Failed to Update Thread",
-                description="Unable to mark thread as added.",
-                color=0xFF4444,
-            )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            embed = error_embed("Failed to Update Thread", "Unable to mark thread as added.")
+            await ctx.followup.send(embed=embed, ephemeral=True)
 
     @commands.slash_command(name="purge_spam", description="Purge recent messages containing spam keywords")
     async def purge_spam(self, ctx: discord.ApplicationContext, 
@@ -242,23 +221,15 @@ class AdminCog(commands.Cog):
                                                description="How many messages to scan (max 500)", 
                                                required=False, 
                                                default=200)): # type: ignore
-        if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
-            embed = discord.Embed(
-                title="❌ Access Denied",
-                description="You don't have permission to use this command.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_staff(ctx):
             return
 
         await ctx.defer()
 
         channel = self.bot.get_channel(ctx.channel_id)
         if not isinstance(channel, discord.TextChannel):
-            embed = discord.Embed(
-                title="❌ Invalid Channel",
-                description="This command must be used in a text channel.",
-                color=0xFF4444,
+            embed = error_embed(
+                "Invalid Channel", "This command must be used in a text channel."
             )
             await ctx.followup.send(embed=embed, ephemeral=True)
             return
@@ -287,12 +258,10 @@ class AdminCog(commands.Cog):
 
         except discord.HTTPException as e:
             logger.error(f"Failed to purge messages: {e}")
-            error_embed = discord.Embed(
-                title="❌ Failed to Purge",
-                description="An error occurred while scanning/deleting messages.",
-                color=0xFF4444,
+            embed = error_embed(
+                "Failed to Purge", "An error occurred while scanning/deleting messages."
             )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            await ctx.followup.send(embed=embed, ephemeral=True)
 
     @commands.slash_command(
         name="hackwarn",
@@ -309,29 +278,20 @@ class AdminCog(commands.Cog):
         ), # type: ignore
     ):
         """Admin only: delete the target message and DM its author with a warning."""
-        if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
-            embed = discord.Embed(
-                title="❌ Access Denied",
-                description="You don't have permission to use this command.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_staff(ctx):
             return
 
         await ctx.defer(ephemeral=True)
 
         channel_id_from_link, msg_id = _parse_message_link(message_link)
         if msg_id is None:
-            error_embed = discord.Embed(
-                title="❌ Missing Message",
-                description=(
-                    "Please provide a message link or ID.\n"
-                    "**Tip:** enable Developer Mode (Settings → Advanced), then "
-                    "right-click a message → **Copy Message Link**."
-                ),
-                color=0xFF4444,
+            embed = error_embed(
+                "Missing Message",
+                "Please provide a message link or ID.\n"
+                "**Tip:** enable Developer Mode (Settings → Advanced), then "
+                "right-click a message → **Copy Message Link**.",
             )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            await ctx.followup.send(embed=embed, ephemeral=True)
             return
 
         target_channel = None
@@ -341,76 +301,64 @@ class AdminCog(commands.Cog):
             target_channel = self.bot.get_channel(ctx.channel_id)
 
         if not isinstance(target_channel, discord.TextChannel):
-            error_embed = discord.Embed(
-                title="❌ Invalid Channel",
-                description="Could not resolve the channel for this message.",
-                color=0xFF4444,
+            embed = error_embed(
+                "Invalid Channel", "Could not resolve the channel for this message."
             )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            await ctx.followup.send(embed=embed, ephemeral=True)
             return
 
         try:
             message = await target_channel.fetch_message(msg_id)
         except discord.HTTPException as e:
             logger.error(f"Failed to fetch message {msg_id}: {e}")
-            error_embed = discord.Embed(
-                title="❌ Message Not Found",
-                description="Could not find the message. It may have already been deleted.",
-                color=0xFF4444,
+            embed = error_embed(
+                "Message Not Found",
+                "Could not find the message. It may have already been deleted.",
             )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            await ctx.followup.send(embed=embed, ephemeral=True)
             return
 
-        target = message.author
+        await self._run_hackwarn(ctx, message)
 
-        if target.bot:
-            error_embed = discord.Embed(
-                title="❌ Cannot Warn Bot",
-                description="This command can only be used on user messages.",
-                color=0xFF4444,
-            )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+    @commands.message_command(name="Hackwarn")
+    async def hackwarn_context(
+        self, ctx: discord.ApplicationContext, message: discord.Message
+    ):
+        """Admin only: right-click a message to delete it and DM its author a hack warning."""
+        if not await require_staff(ctx):
             return
 
-        try:
-            await message.delete()
-        except discord.HTTPException as e:
-            logger.error(f"Failed to delete message: {e}")
-            error_embed = discord.Embed(
-                title="❌ Failed to Delete Message",
-                description="An error occurred while deleting the message.",
-                color=0xFF4444,
+        await ctx.defer(ephemeral=True)
+        await self._run_hackwarn(ctx, message)
+
+    async def _run_hackwarn(
+        self, ctx: discord.ApplicationContext, message: discord.Message
+    ) -> None:
+        """Shared tail for the /hackwarn command and the Hackwarn message command."""
+        if message.author.bot:
+            embed = error_embed(
+                "Cannot Warn Bot", "This command can only be used on user messages."
             )
-            await ctx.followup.send(embed=error_embed, ephemeral=True)
+            await ctx.followup.send(embed=embed, ephemeral=True)
             return
 
-        dm_text = (
-            "Пожалуйста, выйдите из аккаунта и смените пароль, вас взломали!\n"
-            "Старайтесь не скачивать \"бесплатные читы, клиенты, лаунчеры\", в следующий раз будьте внимательнее.\n"
-            "С благодарностью, администрация CollapseLoader.\n"
+        result = await apply_hack_warn(self.bot, message, triggered_by=ctx.author)
+        if not result.deleted:
+            embed = error_embed(
+                "Failed to Delete Message",
+                "An error occurred while deleting the message.",
+            )
+            await ctx.followup.send(embed=embed, ephemeral=True)
+            return
 
-            "---\n"
-
-            "Please log out of your account and change your password, you've been hacked!\n"
-            "Try not to download \"free cheats, clients, launchers\", next time be more careful.\n"
-            "With gratitude, the CollapseLoader administration."
-        )
-
-        dm_sent = False
-        try:
-            await target.send(dm_text)
-            dm_sent = True
-        except Exception:
-            dm_sent = False
-
-        embed = discord.Embed(
-            title="✅ Message Deleted",
-            description=f"Message from {target.mention} was deleted.",
-            color=0x00FF88,
+        embed = make_embed(
+            "✅ Message Deleted",
+            f"Message from {result.target.mention} was deleted.",
+            0x00FF88,
         )
         embed.add_field(
             name="✉️ DM",
-            value="Warning sent via DM." if dm_sent else "⚠️ Could not send DM.",
+            value="Warning sent via DM." if result.dm_sent else "⚠️ Could not send DM.",
             inline=False,
         )
         embed.add_field(name="👤 Triggered by", value=ctx.author.mention, inline=True)
@@ -461,21 +409,11 @@ class AdminCog(commands.Cog):
             autocomplete=discord.utils.basic_autocomplete(get_snippets_list),
         ), # type: ignore
     ):
-        if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
-            embed = discord.Embed(
-                title="❌ Access Denied",
-                description="You don't have permission to use this command.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_staff(ctx):
             return
 
         if name not in self.snippets:
-            embed = discord.Embed(
-                title="❌ Snippet Not Found",
-                description=f"Snippet `{name}` doesn't exist.",
-                color=0xFF4444,
-            )
+            embed = error_embed("Snippet Not Found", f"Snippet `{name}` doesn't exist.")
             available = ", ".join([f"`{s}`" for s in list(self.snippets.keys())[:10]])
             if available:
                 embed.add_field(
@@ -503,28 +441,22 @@ class AdminCog(commands.Cog):
 
     @commands.slash_command(name="snippets", description="List all available snippets")
     async def snippets_list(self, ctx: discord.ApplicationContext):
-        if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
-            embed = discord.Embed(
-                title="❌ Access Denied",
-                description="You don't have permission to use this command.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_staff(ctx):
             return
 
         if not self.snippets:
-            embed = discord.Embed(
-                title="📋 No Snippets Available",
-                description="No snippets have been configured yet.",
-                color=0xFFAA00,
+            embed = make_embed(
+                "📋 No Snippets Available",
+                "No snippets have been configured yet.",
+                0xFFAA00,
             )
             await ctx.respond(embed=embed, ephemeral=True)
             return
 
-        embed = discord.Embed(
-            title="📋 Available Snippets",
-            description="Here are all the available snippet commands:",
-            color=0x00FF88,
+        embed = make_embed(
+            "📋 Available Snippets",
+            "Here are all the available snippet commands:",
+            0x00FF88,
         )
 
         snippet_list = []
@@ -549,13 +481,7 @@ class AdminCog(commands.Cog):
         name="reload_snippets", description="Reload snippets from file"
     )
     async def reload_snippets(self, ctx: discord.ApplicationContext):
-        if ctx.author.id != config.ADMIN_USER_ID:
-            embed = discord.Embed(
-                title="❌ Access Denied",
-                description="This command is only available to the main administrator.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_admin(ctx):
             return
 
         await ctx.defer()
@@ -584,20 +510,14 @@ class AdminCog(commands.Cog):
     async def delete_all_channels_from_category(
         self, ctx: discord.ApplicationContext, category: discord.CategoryChannel
     ):
-        if ctx.author.id != config.ADMIN_USER_ID:
-            embed = discord.Embed(
-                title="❌ Access Denied",
-                description="This command is only available to the main administrator.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_admin(ctx):
             return
 
         if not category.channels:
-            embed = discord.Embed(
-                title="ℹ️ No Channels Found",
-                description=f"There are no channels in {category.name} to delete.",
-                color=0x00AA00,
+            embed = make_embed(
+                "ℹ️ No Channels Found",
+                f"There are no channels in {category.name} to delete.",
+                0x00AA00,
             )
             await ctx.respond(embed=embed, ephemeral=True)
             return

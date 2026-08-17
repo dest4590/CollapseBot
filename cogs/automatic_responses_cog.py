@@ -9,7 +9,8 @@ from discord.ext import commands
 from loguru import logger
 
 import config
-from utils.helpers import is_staff
+from utils.hackwarn import apply_hack_warn, message_matches_hack_spam
+from utils.helpers import make_embed, require_admin, require_staff
 
 
 class AutomaticResponsesCog(commands.Cog):
@@ -128,59 +129,10 @@ class AutomaticResponsesCog(commands.Cog):
         if message.author.bot:
             return
 
-        if message.channel and isinstance(message.channel, (discord.TextChannel, discord.Thread)):
-                content = (message.content or "").lower()
-                spam_keywords = ["bro"]
-
-                found_spam = any(k in content for k in spam_keywords)
-
-                if not found_spam and getattr(message, "attachments", None):
-                    for att in message.attachments:
-                        fname = (att.filename or "").lower()
-                        url = (att.url or "").lower()
-                        if "1.jpg" in fname or "1.jpg" in url:
-                            found_spam = True
-                            break
-
-                if not found_spam and getattr(message, "embeds", None):
-                    for e in message.embeds:
-                        img = getattr(e, "image", None)
-                        if img and getattr(img, "url", None):
-                            if "1.jpg" in img.url.lower():
-                                found_spam = True
-                                break
-
-                if found_spam:
-                    try:
-                        await message.delete()
-                    except Exception:
-                        pass
-
-                    dm_text = (
-                        "Пожалуйста, выйдите из аккаунта и смените пароль, вас взломали!\n"
-                        "Старайтесь не скачивать \"бесплатные читы, клиенты, лаунчеры\", в следующий раз будьте внимательнее.\n"
-                        "С благодарностью, администрация CollapseLoader.\n"
-
-                        "---\n"
-
-                        "Please log out of your account and change your password, you've been hacked!\n"
-                        "Try not to download \"free cheats, clients, launchers\", next time be more careful.\n"
-                        "With gratitude, the CollapseLoader administration."
-                    )
-                    dm_sent = False
-                    try:
-                        await message.author.send(dm_text)
-                        dm_sent = True
-                    except Exception:
-                        dm_sent = False
-
-                    if not dm_sent:
-                        try:
-                            await message.channel.send(f"{message.author.mention} {dm_text}")
-                        except Exception:
-                            pass
-
-                    return
+        if isinstance(message.channel, (discord.TextChannel, discord.Thread)):
+            if message_matches_hack_spam(message):
+                await apply_hack_warn(self.bot, message, automatic=True)
+                return
 
         if not self.automatic_responses:
             return
@@ -239,21 +191,15 @@ class AutomaticResponsesCog(commands.Cog):
         name="automatic_responses", description="Управление автоматическими ответами"
     )
     async def automatic_responses_cmd(self, ctx: discord.ApplicationContext):
-        if not (isinstance(ctx.author, discord.Member) and is_staff(ctx.author)):
-            embed = discord.Embed(
-                title="❌ Доступ запрещен",
-                description="Эта команда доступна только персоналу.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_staff(
+            ctx, "Эта команда доступна только персоналу.", "Доступ запрещен"
+        ):
             return
 
         await ctx.defer()
 
-        embed = discord.Embed(
-            title="🧠 Автоматические Ответы",
-            description="Система автоматических ответов",
-            color=0x00FF88,
+        embed = make_embed(
+            "🧠 Автоматические Ответы", "Система автоматических ответов", 0x00FF88
         )
 
         enabled_responses = [
@@ -300,13 +246,9 @@ class AutomaticResponsesCog(commands.Cog):
         ctx: discord.ApplicationContext,
         name: discord.Option(str, description="Название ответа для переключения"),  # type: ignore
     ):
-        if ctx.author.id != config.ADMIN_USER_ID:
-            embed = discord.Embed(
-                title="❌ Доступ запрещен",
-                description="Эта команда доступна только главному администратору.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_admin(
+            ctx, "Эта команда доступна только главному администратору.", "Доступ запрещен"
+        ):
             return
 
         await ctx.defer()
@@ -352,13 +294,9 @@ class AutomaticResponsesCog(commands.Cog):
         description="Перезагрузить автоматические ответы из файла",
     )
     async def reload_automatic_responses(self, ctx: discord.ApplicationContext):
-        if ctx.author.id != config.ADMIN_USER_ID:
-            embed = discord.Embed(
-                title="❌ Доступ запрещен",
-                description="Эта команда доступна только главному администратору.",
-                color=0xFF4444,
-            )
-            await ctx.respond(embed=embed, ephemeral=True)
+        if not await require_admin(
+            ctx, "Эта команда доступна только главному администратору.", "Доступ запрещен"
+        ):
             return
 
         await ctx.defer()

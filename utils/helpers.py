@@ -6,10 +6,60 @@ import discord
 import config
 from logger import logger
 
+COLOR_ERROR = 0xFF4444
+COLOR_SUCCESS = 0x00FF88
+COLOR_WARNING = 0xFF8800
+COLOR_INFO = 0x00AA00
+
 
 def get_emoji(name: str, id: int):
     """Get Discord emoji string format"""
     return f"<:{name}:{id}>"
+
+
+def make_embed(
+    title: str, description: str = "", color: int = COLOR_INFO, **kwargs
+) -> discord.Embed:
+    """Build a discord.Embed, forwarding extra kwargs (e.g. footer text via ``set_footer``-style dicts)."""
+    return discord.Embed(title=title, description=description, color=color, **kwargs)
+
+
+def error_embed(title: str, description: str) -> discord.Embed:
+    """Standard ❌-prefixed error embed."""
+    if not title.startswith("❌"):
+        title = f"❌ {title}"
+    return make_embed(title, description, COLOR_ERROR)
+
+
+def access_denied_embed(
+    description: str = "You don't have permission to use this command.",
+    title: str = "Access Denied",
+) -> discord.Embed:
+    return error_embed(title, description)
+
+
+async def require_staff(
+    ctx: discord.ApplicationContext,
+    description: str = "You don't have permission to use this command.",
+    title: str = "Access Denied",
+) -> bool:
+    """Respond with an access-denied embed and return False unless the invoker is staff."""
+    if isinstance(ctx.author, discord.Member) and is_staff(ctx.author):
+        return True
+    await ctx.respond(embed=access_denied_embed(description, title), ephemeral=True)
+    return False
+
+
+async def require_admin(
+    ctx: discord.ApplicationContext,
+    description: str = "This command is only available to the main administrator.",
+    title: str = "Access Denied",
+) -> bool:
+    """Respond with an access-denied embed and return False unless the invoker is the main admin."""
+    if is_admin(ctx.author.id):
+        return True
+    await ctx.respond(embed=access_denied_embed(description, title), ephemeral=True)
+    return False
 
 
 def check_word_list(keywords: list, message: discord.Message) -> bool:
